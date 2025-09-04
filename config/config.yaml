@@ -1,0 +1,120 @@
+# Green Hydrogen Production Framework Configuration
+# This file contains default settings for the application
+
+application:
+  name: "Green Hydrogen Production Framework"
+  version: "1.0.0"
+  debug: false
+  log_level: "INFO"
+  log_file: "logs/application.log"
+
+api:
+  base_url: "https://www.renewables.ninja/api"
+  rate_limit: 50
+  timeout: 30
+  max_retries: 5
+  backoff_factor: 1.0
+  user_agent: "GreenHydrogenFramework/1.0"
+
+defaults:
+  # Default location: New York City, USA
+  latitude: 40.7128
+  longitude: -74.0060
+  # Default system capacities (MW)
+  solar_capacity: 5.0
+  wind_capacity: 3.0
+  electrolyser_capacity: 1.0
+  # Default date range
+  date_from: "2024-01-01"
+  date_to: "2024-12-31"
+
+electrolyser:
+  default_type: "PEM"
+  PEM:
+    max_efficiency: 0.75        # 75% efficiency
+    min_efficiency: 0.60        # 60% efficiency at low load
+    capital_cost_usd_per_kw: 800
+    operating_cost_usd_per_kwh: 0.05
+    lifetime_years: 15
+    replacement_cycles: 2
+
+financial:
+  currency: "USD"
+  discount_rate: 0.08           # 8% discount rate
+  inflation_rate: 0.03          # 3% inflation rate
+  electricity_price_usd_per_kwh: 0.08
+  hydrogen_price_usd_per_kg: 4.5
+
+power_system:
+  battery_efficiency: 0.85      # 85% round-trip efficiency
+  battery_capacity: 2.0         # 2 MWh battery capacity
+  battery_cost_usd_per_kwh: 300
+  grid_connection_cost_usd_per_kw: 150
+
+data:
+  temperature_reference: 25     # Reference temperature in Celsius
+  pressure_atmospheric: 1.01325  # Atmospheric pressure in bar
+  data_cache_hours: 24          # How long to cache API data
+  interpolation_method: "linear"
+  aggregation_freq: "D"         # Daily aggregation by default
+
+visualization:
+  theme: "light"
+  plot_width: 800
+  plot_height: 600
+  color_palette: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]
+  font_family: "Arial"
+  title_size: 16
+  label_size: 12
+
+validation:
+  max_latitude: 90.0
+  min_latitude: -90.0
+  max_longitude: 180.0
+  min_longitude: -180.0
+  max_capacity: 1000.0
+  min_capacity: 0.001
+  max_efficiency: 1.0
+  min_efficiency: 0.1
+
+units:
+  energy_production: "MWh"
+  capacity: "MW"
+  hydrogen_production: "kg"
+  cost: "USD"
+  efficiency: "percentage"
+  time: "hours"
+
+export:
+  formats: ["xlsx", "csv", "json", "pdf"]
+  reports_directory: "reports/"
+  charts_directory: "charts/"
+  data_directory: "data/"
+
+performance:
+  max_data_points: 8760         # One year hourly data
+  parallel_processing: true
+  chunk_size: 1000              # Process data in chunks
+  memory_limit_mb: 1000
+
+safety:
+  max_operating_temperature: 80  # Celsius
+  min_operating_temperature: 0   # Celsius
+  emergency_shutdown_enabled: true
+  monitoring_interval_minutes: 5
+
+regional_defaults:
+  USA:
+    currency: "USD"
+    timezone: "UTC"
+    grid_carbon_intensity: 0.43  # kgCO2/kWh
+
+  Europe:
+    currency: "EUR"
+    timezone: "UTC"
+    grid_carbon_intensity: 0.31
+
+  Australia:
+    currency: "AUD"
+    timezone: "UTC"
+    grid_carbon_intensity: 0.74

@@ -119,14 +119,14 @@ class TestRenewablesNinjaAPI:
                 expected_total = (0.85 * 1.5 + 0.65 * 2.0) + (0.75 * 1.5 + 0.72 * 2.0)
                 assert abs(result['total_energy_generated'] - expected_total) < 0.001
 
-    def test_australian_location_profiles(self, api_client):
-        """Test API integration with Australian location profiles"""
-        # Australian locations
+    def test_usa_location_profiles(self, api_client):
+        """Test API integration with USA location profiles"""
+        # USA locations
         locations = [
-            {"name": "Sydney", "lat": -33.8688, "lon": 151.2093},
-            {"name": "Melbourne", "lat": -37.8136, "lon": 144.9631},
-            {"name": "Brisbane", "lat": -27.4698, "lon": 153.0251},
-            {"name": "Perth", "lat": -31.9505, "lon": 115.8605}
+            {"name": "New York City", "lat": 40.7128, "lon": -74.0060},
+            {"name": "Los Angeles", "lat": 34.0522, "lon": -118.2437},
+            {"name": "Chicago", "lat": 41.8781, "lon": -87.6298},
+            {"name": "Houston", "lat": 29.7604, "lon": -95.3698}
         ]
 
         for location in locations:
@@ -139,8 +139,8 @@ class TestRenewablesNinjaAPI:
                             "2024-01-01", "2024-01-02"
                         )
                         assert 'data' in solar_result
-                        assert location["lat"] >= -43.65 and location["lat"] <= -9.23  # Australian latitude range
-                        assert location["lon"] >= 113.34 and location["lon"] <= 153.56  # Australian longitude range
+                        assert location["lat"] >= 24.0 and location["lat"] <= 49.0  # USA latitude range
+                        assert location["lon"] >= -125.0 and location["lon"] <= -67.0  # USA longitude range
 
                         # Test wind data fetching for Australian locations
                         wind_result = api_client.get_wind_data(
