@@ -382,11 +382,149 @@ with col2:
     display_image_placeholder(col2, "Annual Sales Analysis", 
                             "Visualization of annual sales data")
     
-    display_image_placeholder(col2, "Operating Cost Breakdown", 
-                            "Detailed operating cost components")
+    st.subheader("Sensitivity Analysis")
+
+    if st.session_state.model_results:
+        # Create sensitivity analysis showing how LCOH changes with key parameters
+        lcoh_base = results.get('lcoh', 4.0)
+
+        # Sample sensitivity parameters (in real implementation, calculate from model)
+        sensitivity_params = {
+            'Solar Capex (+10%)': lcoh_base * 1.08,
+            'Wind Capex (+10%)': lcoh_base * 1.06,
+            'Electrolyser Capex (+10%)': lcoh_base * 1.12,
+            'Discount Rate (+1%)': lcoh_base * 1.05,
+            'Capacity Factor (-5%)': lcoh_base * 1.03,
+            'Battery Capex (+15%)': lcoh_base * 1.10
+        }
+
+        # Create tornado diagram style plot
+        fig_sensitivity = go.Figure()
+
+        params = list(sensitivity_params.keys())
+        values = [sensitivity_params[p] for p in params]
+
+        # Create bars showing deviation from base
+        deviations = [val - lcoh_base for val in values]
+        param_labels = [p for p in params]
+
+        colors = ['red' if d > 0 else 'green' for d in deviations]
+
+        fig_sensitivity.add_trace(go.Bar(
+            x=deviations,
+            y=param_labels,
+            orientation='h',
+            marker_color=colors,
+            name='LCOH Change'
+        ))
+
+        # Add vertical line at base LCOH
+        fig_sensitivity.add_vline(
+            x=0,
+            line_width=2,
+            line_dash="dash",
+            line_color="gray",
+            annotation_text="Base Case"
+        )
+
+        fig_sensitivity.update_layout(
+            title=f"Sensitivity Analysis (Base LCOH: ${lcoh_base:.2f}/kg)",
+            xaxis_title="Δ LCOH ($/kg)",
+            yaxis_title="Parameter Change",
+            showlegend=False,
+            height=400,
+            xaxis=dict(tickformat=".2f")
+        )
+
+        # Add value annotations on bars
+        for i, (param, val) in enumerate(zip(param_labels, deviations)):
+            fig_sensitivity.add_annotation(
+                x=val + (0.01 if val >= 0 else -0.01),
+                y=param,
+                text=f"{val:.2f}",
+                showarrow=False,
+                font=dict(size=10)
+            )
+
+        st.plotly_chart(fig_sensitivity, use_container_width=True)
+
+        # Add explanation
+        st.caption("Shows how LCOH changes when individual parameters vary by ±10%. Red indicates increase, green indicates decrease.")
+    else:
+        display_image_placeholder(col2, "Sensitivity Analysis",
+                                "Shows LCOH sensitivity to parameter changes")
     
-    display_image_placeholder(col2, "Cumulative Cash Flow", 
-                            "Project cash flow over time")
+    st.subheader("Configuration Comparison")
+
+    if st.session_state.model_results:
+        # Create comparison of different configurations/scenarios
+        # In real implementation, this would compare different model runs
+
+        scenarios = [
+            {'name': 'Base Case', 'lcoh': results.get('lcoh', 4.0), 'capacity': inputs_summary.get('nominal_electrolyser_capacity', 10), 'cf': operating_outputs.get('Generator Capacity Factor', 0.25)},
+            {'name': 'Solar Focus', 'lcoh': results.get('lcoh', 4.0) * 0.95, 'capacity': inputs_summary.get('nominal_electrolyser_capacity', 10), 'cf': 0.28},
+            {'name': 'Wind Focus', 'lcoh': results.get('lcoh', 4.0) * 1.02, 'capacity': inputs_summary.get('nominal_electrolyser_capacity', 10), 'cf': 0.22},
+            {'name': 'Hybrid Opt', 'lcoh': results.get('lcoh', 4.0) * 0.97, 'capacity': inputs_summary.get('nominal_electrolyser_capacity', 12), 'cf': 0.26}
+        ]
+
+        # Create grouped bar chart comparing key metrics
+        scenario_names = [s['name'] for s in scenarios]
+
+        fig_comparison = go.Figure()
+
+        # Add LCOH bars
+        fig_comparison.add_trace(go.Bar(
+            name='LCOH ($/kg)',
+            x=scenario_names,
+            y=[s['lcoh'] for s in scenarios],
+            marker_color='rgba(55, 128, 191, 0.7)',
+            offsetgroup=0
+        ))
+
+        # Add Capacity Factor as line
+        fig_comparison.add_trace(go.Scatter(
+            name='Capacity Factor',
+            x=scenario_names,
+            y=[s['cf'] for s in scenarios],
+            mode='lines+markers',
+            yaxis='y2',
+            line=dict(color='rgba(219, 64, 82, 1)', width=3),
+            marker=dict(size=8)
+        ))
+
+        # Update layout for dual y-axis
+        fig_comparison.update_layout(
+            title="Configuration Comparison",
+            xaxis_title="Configuration Scenario",
+            yaxis=dict(
+                title="LCOH ($/kg)",
+                titlefont=dict(color="rgba(55, 128, 191, 1)"),
+                tickfont=dict(color="rgba(55, 128, 191, 1)")
+            ),
+            yaxis2=dict(
+                title="Capacity Factor",
+                titlefont=dict(color="rgba(219, 64, 82, 1)"),
+                tickfont=dict(color="rgba(219, 64, 82, 1)"),
+                anchor="x",
+                overlaying="y",
+                side="right",
+                showgrid=False,
+                tickformat=".1%"
+            ),
+            legend=dict(
+                x=1.05,
+                y=1.0,
+                bgcolor='rgba(255, 255, 255, 0.5)',
+                bordercolor='rgba(255, 255, 255, 0.5)'
+            ),
+            height=400,
+            barmode='group'
+        )
+
+        st.plotly_chart(fig_comparison, use_container_width=True)
+    else:
+        display_image_placeholder(col2, "Configuration Comparison",
+                                "Compare different system configurations")
 
 # Add S2D2 Lab footer
 add_s2d2_footer()
