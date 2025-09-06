@@ -287,8 +287,89 @@ with col1:
         display_image_placeholder(col1, "Energy Balance",
                                 "Pie chart showing energy distribution")
 
-    display_image_placeholder(col1, "Waterfall Plot - LCH2 Components",
-                            "Breakdown of LCH2 components")
+    st.subheader("LCOH Cost Breakdown")
+
+    if st.session_state.model_results:
+        # Calculate LCOH components (CAPEX, OPEX, etc.)
+        # Using the business_case or financial results if available
+        business_case = results.get('business_case', {})
+
+        # Sample cost breakdown - in real implementation, calculate from model results
+        cost_components = {
+            'CAPEX': business_case.get('capex', 2000),
+            'OPEX': business_case.get('opex', 300),
+            'Stack Replacement': business_case.get('stack_replacement', 150),
+            'Water Costs': business_case.get('water_costs', 50)
+        }
+
+        # Calculate total costs
+        total_cost = sum(cost_components.values())
+
+        # Create waterfall chart using our ChartDataFormatter
+        formatter = ChartDataFormatter()
+        fig_waterfall = go.Figure()
+
+        # Create cumulative x values and y values
+        components = ['Base'] + list(cost_components.keys()) + ['Total']
+        values = [0] + list(cost_components.values()) + [0]
+        cumulative = [0]
+
+        for i, val in enumerate(values[1:], 1):
+            cumulative.append(cumulative[-1] + val)
+
+        # Add waterfall bars
+        for i in range(len(values)):
+            if i == 0:
+                # Base
+                fig_waterfall.add_trace(go.Bar(
+                    x=[components[i]],
+                    y=[values[i]],
+                    name='Base',
+                    marker_color='rgba(55, 128, 191, 0.7)',
+                    showlegend=False
+                ))
+            elif i == len(values) - 1:
+                # Total
+                fig_waterfall.add_trace(go.Bar(
+                    x=[components[i]],
+                    y=[cumulative[-1]],
+                    name='Total',
+                    marker_color='rgba(50, 171, 96, 0.7)',
+                    showlegend=False
+                ))
+            else:
+                # Components
+                fig_waterfall.add_trace(go.Bar(
+                    x=[components[i]],
+                    y=[values[i]],
+                    name=components[i],
+                    marker_color='rgba(219, 64, 82, 0.7)' if values[i] > 0 else 'rgba(50, 171, 96, 0.7)',
+                    showlegend=False
+                ))
+
+        fig_waterfall.update_layout(
+            title="LCOH Cost Components (A$/kg)",
+            xaxis_title="",
+            yaxis_title="Cumulative Cost (A$/kg)",
+            showlegend=False,
+            height=400
+        )
+
+        # Add annotations for values
+        for i, val in enumerate(cumulative):
+            if i < len(components) and val != 0:
+                fig_waterfall.add_annotation(
+                    x=components[i],
+                    y=val + 0.1,
+                    text=f"{val:.2f}",
+                    showarrow=False,
+                    font=dict(size=10)
+                )
+
+        st.plotly_chart(fig_waterfall, use_container_width=True)
+    else:
+        display_image_placeholder(col1, "LCOH Cost Breakdown",
+                                "Waterfall chart showing LCOH cost components")
 
     display_image_placeholder(col1, "Annual Operating Cost Analysis",
                             "Visualization of operating costs")
