@@ -1,0 +1,121 @@
+# Cache Configuration Settings
+# Configuration for API response caching and invalidation strategies
+
+cache:
+  # Default cache settings
+  default_ttl_seconds: 86400  # 24 hours
+  max_cache_size_mb: 1024     # 1 GB
+  cache_directory: "cache/api_responses"
+  enable_compression: true
+
+  # Cache invalidation settings
+  invalidation:
+    # Automatic cleanup interval (seconds)
+    cleanup_interval: 3600    # 1 hour
+
+    # Maximum age for different data types (seconds)
+    data_ttl:
+      solar_data: 86400       # 24 hours
+      wind_data: 86400        # 24 hours
+      hybrid_data: 86400      # 24 hours
+      location_data: 604800   # 7 days (location info changes rarely)
+
+    # Stale data cleanup (seconds)
+    max_stale_age: 172800     # 48 hours
+
+    # Pattern-based rules
+    patterns:
+      # Invalidate old year data more aggressively
+      - pattern: "*year_202[0-2]*"
+        max_age: 2592000      # 30 days
+        reason: "old_year_data"
+
+      # Keep current year data longer
+      - pattern: "*year_2024*"
+        max_age: 86400        # 24 hours
+        reason: "current_year_data"
+
+  # Cache warming settings
+  warming:
+    # Enable automatic cache warming
+    enabled: true
+
+    # Common locations to warm (lat, lon, description)
+    common_locations:
+      - [40.7128, -74.0060, "New York, NY"]
+      - [34.0522, -118.2437, "Los Angeles, CA"]
+      - [41.8781, -87.6298, "Chicago, IL"]
+      - [29.7604, -95.3698, "Houston, TX"]
+      - [39.2904, -76.6122, "Baltimore, MD"]
+      - [25.7617, -80.1918, "Miami, FL"]
+      - [47.6062, -122.3321, "Seattle, WA"]
+      - [39.7392, -104.9903, "Denver, CO"]
+      - [33.4484, -112.0740, "Phoenix, AZ"]
+      - [42.3601, -71.0589, "Boston, MA"]
+
+    # Data types to warm
+    data_types: ["solar", "wind"]
+    strategy: "common_locations"  # or "user_history", "predictive"
+    max_warm_entries: 50
+
+  # Performance settings
+  performance:
+    async_enabled: false
+    batch_size: 10
+    connection_pool_size: 5
+    timeouts:
+      read: 30
+      write: 30
+      cleanup: 120
+
+  # Monitoring and logging
+  monitoring:
+    stats_enabled: true
+    stats_retention_days: 30
+    log_level: "INFO"
+    performance_metrics: true
+    stats_export_interval: 3600  # 1 hour
+
+  # Update strategies
+  update_strategies:
+    default: "lazy"
+    lazy:
+      check_staleness: true
+    eager:
+      immediate_update: true
+      max_concurrent_updates: 3
+    scheduled:
+      schedule: "0 2 * * *"
+      batch_size: 20
+
+# Environment-specific overrides
+environments:
+  development:
+    cache:
+      default_ttl_seconds: 3600
+      max_cache_size_mb: 100
+      warming:
+        enabled: false
+      monitoring:
+        log_level: "DEBUG"
+
+  testing:
+    cache:
+      default_ttl_seconds: 60
+      max_cache_size_mb: 10
+      cache_directory: "tmp/test_cache"
+      warming:
+        enabled: false
+      monitoring:
+        stats_enabled: false
+
+  production:
+    cache:
+      default_ttl_seconds: 86400
+      max_cache_size_mb: 2048
+      warming:
+        enabled: true
+        max_warm_entries: 100
+      monitoring:
+        performance_metrics: true
+        stats_export_interval: 1800
