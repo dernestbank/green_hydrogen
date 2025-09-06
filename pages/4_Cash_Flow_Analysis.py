@@ -13,6 +13,182 @@ st.title("Hydrogen Cost Analysis Tool - Cash Flow Analysis")
 # Create FinancialCalculator instance
 calculator = FinancialCalculator(discount_rate=0.04, project_life=20)
 
+def create_payback_period_analysis(cash_flows, discount_rate, project_life):
+    """Create payback period analysis visualization"""
+    years = cash_flows['Year'].values
+
+    # Calculate discounted cumulative cash flows
+    discounted_cumulative = []
+    cumulative_sum = 0
+
+    for year in range(len(cash_flows)):
+        if year == 0:
+            discounted_cf = cash_flows['Total'][year]
+        else:
+            discounted_cf = cash_flows['Total'][year] / ((1 + discount_rate) ** year)
+        cumulative_sum += discounted_cf
+        discounted_cumulative.append(cumulative_sum)
+
+    # Create figure
+    fig = go.Figure()
+
+    # Add cumulative discounted cash flow line
+    fig.add_trace(go.Scatter(
+        x=years,
+        y=discounted_cumulative,
+        mode='lines+markers',
+        name='Cumulative Discounted Cash Flow',
+        line=dict(color='#1f77b4', width=3),
+        marker=dict(size=8)
+    ))
+
+    # Add investment line (negative initial investment)
+    initial_investment = abs(cash_flows['Total'][0])
+    fig.add_trace(go.Scatter(
+        x=years,
+        y=[initial_investment * -1] * len(years),
+        mode='lines',
+        name='Break-even Target',
+        line=dict(color='red', width=2, dash='dot')
+    ))
+
+    # Find payback period
+    payback_year = None
+    for i, cum_cf in enumerate(discounted_cumulative):
+        if cum_cf >= 0:
+            payback_year = i
+            break
+
+    # Add payback annotation if found
+    if payback_year is not None:
+        fig.add_annotation(
+            x=payback_year,
+            y=discounted_cumulative[payback_year],
+            text=f"Payback Year: {payback_year}",
+            showarrow=True,
+            arrowhead=1,
+            ax=50,
+            ay=-50
+        )
+
+        # Add vertical line at payback year
+        fig.add_vline(x=payback_year, line_width=2, line_dash="dash", line_color="green")
+
+    fig.update_layout(
+        title="Payback Period Analysis",
+        xaxis_title="Year",
+        yaxis_title="Cumulative Discounted Cash Flow ($)",
+        height=500,
+        showlegend=True
+    )
+
+    return fig
+
+def create_stacked_cash_flow_waterfall(cash_flows):
+    """Create stacked cash flow waterfall chart showing component contributions"""
+    years = list(range(len(cash_flows)))
+
+    # Initialize cumulative flows
+    cumulative_capex = 0
+    cumulative_opex = 0
+    cumulative_revenue = 0
+    cumulative_other = 0
+
+    capex_flows = []
+    opex_flows = []
+    revenue_flows = []
+    other_flows = []
+
+    for year in years:
+        # CAPEX (Year 0 only, negative outflow)
+        capex = cash_flows['Gen_CAPEX'][year] + cash_flows['Elec_CAPEX'][year] + cash_flows['Battery_cost'][year]
+        capex_flows.append(capex)
+        cumulative_capex += capex
+
+        # OPEX (Years 1+, positive outflow)
+        opex = (cash_flows['Gen_OPEX'][year] + cash_flows['Elec_OandM'][year] +
+                cash_flows['Power_cost'][year] + cash_flows['Water_cost'][year] +
+                cash_flows['Stack_replacement'][year])
+        opex_flows.append(opex)
+        cumulative_opex += opex
+
+        # Revenue (Years 1+, negative inflow as it's already included in Total)
+        if 'hydrogen_revenue' in cash_flows.columns and year > 0:
+            revenue = cash_flows['hydrogen_revenue'][year]
+        else:
+            revenue = 0
+        revenue_flows.append(revenue)
+        cumulative_revenue += revenue
+
+        # Other components
+        other = cash_flows['Total'][year] - capex - opex - revenue
+        other_flows.append(other)
+        cumulative_other += other
+
+    # Create waterfall chart
+    fig = go.Figure()
+
+    # Add traces for each component
+    fig.add_trace(go.Waterfall(
+        name="CAPEX",
+        orientation="v",
+        measure=["absolute"] + ["relative"] * (len(capex_flows) - 1),
+        x=years,
+        y=capex_flows,
+        connector=dict(mode="between", line=dict(width=2, color="rgb(0, 0, 0)")),
+        decreasing=dict(marker=dict(color="red")),
+        increasing=dict(marker=dict(color="red")),
+        totals=dict(marker=dict(color="red"))
+    ))
+
+    fig.add_trace(go.Waterfall(
+        name="OPEX",
+        orientation="v",
+        measure=["relative"] * len(opex_flows),
+        x=years,
+        y=opex_flows,
+        connector=dict(mode="between", line=dict(width=2, color="rgb(0, 0, 0)")),
+        decreasing=dict(marker=dict(color="orange")),
+        increasing=dict(marker=dict(color="orange")),
+        totals=dict(marker=dict(color="orange"))
+    ))
+
+    fig.add_trace(go.Waterfall(
+        name="Revenue",
+        orientation="v",
+        measure=["relative"] * len(revenue_flows),
+        x=years,
+        y=revenue_flows,
+        connector=dict(mode="between", line=dict(width=2, color="rgb(0, 0, 0)")),
+        decreasing=dict(marker=dict(color="green")),
+        increasing=dict(marker=dict(color="green")),
+        totals=dict(marker=dict(color="green"))
+    ))
+
+    if any(abs(x) > 1 for x in other_flows):
+        fig.add_trace(go.Waterfall(
+            name="Other",
+            orientation="v",
+            measure=["relative"] * len(other_flows),
+            x=years,
+            y=other_flows,
+            connector=dict(mode="between", line=dict(width=2, color="rgb(0, 0, 0)")),
+            decreasing=dict(marker=dict(color="blue")),
+            increasing=dict(marker=dict(color="blue")),
+            totals=dict(marker=dict(color="blue"))
+        ))
+
+    fig.update_layout(
+        title="Cash Flow Waterfall by Component",
+        xaxis_title="Year",
+        yaxis_title="Cash Flow ($)",
+        waterfallgap=0.3,
+        showlegend=True,
+        height=500
+    )
+
+    return fig
+
 def create_cash_flow_visualizations(cash_flows, hydrogen_price):
     """Create comprehensive cash flow visualizations"""
     years = cash_flows['Year'].values
@@ -236,6 +412,58 @@ if st.session_state.model_results:
     if isinstance(cash_flows, pd.DataFrame) and not cash_flows.empty:
         fig = create_cash_flow_visualizations(cash_flows, hydrogen_price)
         st.plotly_chart(fig, use_container_width=True)
+
+        # Payback Period Analysis Charts
+        st.subheader("Payback Period Analysis")
+
+        # Show payback period chart
+        payback_fig = create_payback_period_analysis(cash_flows, discount_rate/100, 20)
+        st.plotly_chart(payback_fig, use_container_width=True)
+
+        # Payback period insights
+        discounted_cumulative = []
+        cumulative_sum = 0
+
+        for year in range(len(cash_flows)):
+            if year == 0:
+                discounted_cf = cash_flows['Total'][year]
+            else:
+                discounted_cf = cash_flows['Total'][year] / ((1 + discount_rate/100) ** year)
+            cumulative_sum += discounted_cf
+            discounted_cumulative.append(cumulative_sum)
+
+        payback_year = None
+        for i, cum_cf in enumerate(discounted_cumulative):
+            if cum_cf >= 0:
+                payback_year = i
+                break
+
+        if payback_year:
+            st.info(f"💡 **Payback Insight**: The project recovers its initial investment by Year {payback_year}.")
+
+            # Calculate payback fraction if not exactly at year boundary
+            if payback_year < len(discounted_cumulative) - 1:
+                prev_cum = discounted_cumulative[payback_year - 1]
+                current_cum = discounted_cumulative[payback_year]
+                if current_cum != 0:
+                    fraction = prev_cum / current_cum
+                    exact_payback = payback_year - 1 + fraction
+                    st.write(f"Exact payback period: {exact_payback:.2f} years")
+        else:
+            st.warning("⚠️ **Payback Warning**: The project does not reach break-even within the 20-year timeframe based on current cash flows.")
+
+        # Stacked Cash Flow Waterfall
+        st.subheader("Cash Flow Component Breakdown")
+
+        try:
+            waterfall_fig = create_stacked_cash_flow_waterfall(cash_flows)
+            st.plotly_chart(waterfall_fig, use_container_width=True)
+
+            # Waterfall insights
+            st.info("💡 **Waterfall Analysis**: This chart shows how each financial component contributes to the overall cash flow. Red bars represent costs (negative cash flows), green bars show revenues (positive cash flows), allowing you to track major cost drivers and revenue streams throughout the project lifecycle.")
+
+        except Exception as e:
+            st.warning(f"Could not generate waterfall chart: {str(e)}")
 
         # Detailed Cash Flow Table
         if show_details and isinstance(cash_flows, pd.DataFrame):
