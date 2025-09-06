@@ -482,6 +482,160 @@ if st.session_state.model_results:
 else:
     st.info("Please go to the 'Inputs' page and run the calculation first.")
 
+# Component Cost Contribution Analysis
+st.header("Component Cost Contribution Analysis")
+
+if st.session_state.model_results:
+    results = st.session_state.model_results
+    inputs_summary = results.get('inputs_summary', {})
+    operating_outputs = results.get('operating_outputs', {})
+
+    # Get annual hydrogen production
+    annual_h2_kg = operating_outputs.get('Hydrogen Output for Fixed Operation [t/yr]', 100) * 1000  # Convert to kg
+
+    # Calculate cost contribution per kg H2 for each CAPEX component
+    solar_capacity = inputs_summary.get('nominal_solar_farm_capacity', 10)
+    wind_capacity = inputs_summary.get('nominal_wind_farm_capacity', 0)
+    battery_power = inputs_summary.get('battery_rated_power', 2)
+    electrolyser_capacity = inputs_summary.get('nominal_electrolyser_capacity', 10)
+
+    # Component cost breakdown per year (amortized over project life)
+    project_life_years = 20
+    discount_rate = 0.04
+
+    components = {
+        'Solar PV System': solar_capacity * 1100,
+        'Wind Turbine System': wind_capacity * 1600,
+        'Battery Storage': battery_power * 400,
+        'Electrolyser System': electrolyser_capacity * 800,
+        'Electrical Infrastructure': (solar_capacity + wind_capacity) * 300,
+        'General Facilities': (solar_capacity + wind_capacity + electrolyser_capacity) * 200,
+        'Engineering & Supervision': (solar_capacity + wind_capacity + electrolyser_capacity) * 150,
+        'Other Costs': (solar_capacity + wind_capacity + electrolyser_capacity) * 100,
+        'Owner\'s Costs': (solar_capacity + wind_capacity + electrolyser_capacity) * 150
+    }
+
+    # Remove zero values
+    components = {k: v for k, v in components.items() if v > 0}
+
+    # Calculate NPW of each component (present worth)
+    component_npw = {}
+    for comp, capital_cost in components.items():
+        # Amortize capital cost over project life with discount rate
+        npw = capital_cost / ((1 - (1 + discount_rate) ** (-project_life_years)) / discount_rate)
+        component_npw[comp] = npw
+
+    # Calculate cost per kg H2 for each component
+    component_cost_per_kg = {comp: npw / annual_h2_kg for comp, npw in component_npw.items()}
+
+    # Create visualization columns
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Cost Contribution by Component")
+
+        # Bar chart showing cost per kg H2 by component
+        fig_contribution = go.Figure()
+
+        fig_contribution.add_trace(go.Bar(
+            x=list(component_cost_per_kg.keys()),
+            y=list(component_cost_per_kg.values()),
+            marker_color=['#1f77b4' if v < component_cost_per_kg.get('Electrolyser System', 0) else '#ff7f0e' for v in component_cost_per_kg.values()],
+            showlegend=False
+        ))
+
+        fig_contribution.update_layout(
+            title="Cost Contribution to LCOH by Component",
+            xaxis_title="Component",
+            yaxis_title="Cost per kg H₂ (A$/kg)",
+            height=400,
+            xaxis_tickangle=45
+        )
+
+        st.plotly_chart(fig_contribution, use_container_width=True)
+
+    with col2:
+        st.subheader("Cost Contribution Summary")
+
+        # Calculate percentages
+        total_component_cost = sum(component_npw.values())
+        component_percentages = {comp: (npw/total_component_cost*100) for comp, npw in component_npw.items()}
+
+        contribution_df = pd.DataFrame({
+            'Component': list(component_cost_per_kg.keys()),
+            'Cost per kg H₂ (A$/kg)': [f"{v:.4f}" for v in component_cost_per_kg.values()],
+            'Percentage of Total': [f"{component_percentages[comp]:.1f}%" for comp in component_cost_per_kg.keys()],
+            'Annualized Cost (NPW)': [f"${npw:,.0f}" for npw in component_npw.values()]
+        })
+
+        st.dataframe(contribution_df, use_container_width=True)
+
+        # Key insights
+        top_contributors = sorted(component_cost_per_kg.items(), key=lambda x: x[1], reverse=True)[:3]
+        lowest_contributors = sorted(component_cost_per_kg.items(), key=lambda x: x[1])[:3]
+
+        with st.expander("Key Insights", expanded=True):
+            st.write("**Top Cost Contributors:**")
+            for comp, cost in top_contributors:
+                st.write(f"• {comp}: A${cost:.4f}/kg")
+
+            st.write("\n**Lowest Cost Contributors:**")
+            for comp, cost in lowest_contributors:
+                st.write(f"• {comp}: A${cost:.4f}/kg")
+
+    # Sensitivity Analysis for key components
+    st.subheader("Component Cost Sensitivity Analysis")
+
+    key_components = ['Electrolyser System', 'Solar PV System']
+    sensitivity_range = 0.6  # ±60%
+
+    sensitivity_data = []
+    for comp in key_components:
+        if comp in components:
+            base_cost = components[comp]
+            for factor in [0.4, 0.7, 1.0, 1.3, 1.6]:  # 60% reduction to 60% increase
+                adjusted_cost = base_cost * factor
+                # Recalculate NPW
+                npw_adjusted = adjusted_cost / ((1 - (1 + discount_rate) ** (-project_life_years)) / discount_rate)
+                lcoh_adjusted = npw_adjusted / annual_h2_kg
+
+                sensitivity_data.append({
+                    'Component': comp,
+                    'Variation': f"{((factor-1)*100):+.0f}%" if factor != 1.0 else 'Base',
+                    'LCOH Impact (A$/kg)': lcoh_adjusted
+                })
+
+    sensitivity_df = pd.DataFrame(sensitivity_data)
+
+    # Create sensitivity visualization
+    fig_sensitivity = go.Figure()
+
+    for comp in key_components:
+        if comp in sensitivity_df['Component'].values:
+            comp_data = sensitivity_df[sensitivity_df['Component'] == comp]
+            fig_sensitivity.add_trace(go.Scatter(
+                x=comp_data['Variation'],
+                y=comp_data['LCOH Impact (A$/kg)'],
+                mode='lines+markers',
+                name=comp,
+            ))
+
+    fig_sensitivity.update_layout(
+        title="Sensitivity of LCOH to Key Component Cost Changes",
+        xaxis_title="Cost Variation",
+        yaxis_title="LCOH (A$/kg)",
+        height=400,
+        showlegend=True
+    )
+
+    st.plotly_chart(fig_sensitivity, use_container_width=True)
+
+    with st.expander("Sensitivity Data Table"):
+        st.dataframe(sensitivity_df.style.format({'LCOH Impact (A$/kg)': "{:.4f}"}))
+
+else:
+    st.info("Please go to the 'Inputs' page and run the calculation first.")
+
 # Keep placeholders for future development
 st.header("Additional Analysis Areas")
 with st.expander("Annual Operational Profile", expanded=False):
