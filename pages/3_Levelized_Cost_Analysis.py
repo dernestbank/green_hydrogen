@@ -305,13 +305,190 @@ if st.session_state.model_results:
 else:
     st.info("Please go to the 'Inputs' page and run the calculation first.")
 
-# Keep placeholders for future development
-st.header("Future Development Areas")
-with st.expander("Annual Operational Profile", expanded=False):
-    st.write("Table/chart for annual operational profile - to be implemented")
+st.header("Discounted Cash Flow Analysis")
 
-with st.expander("Legacy S3 Levelised Cost Analysis", expanded=False):
-    st.write("Detailed discounted cash flow analysis to match Excel S3 - to be implemented")
+if st.session_state.model_results:
+    results = st.session_state.model_results
+    inputs_summary = results.get('inputs_summary', {})
+    operating_outputs = results.get('operating_outputs', {})
+
+    project_life = 20
+    discount_rate = 0.04  # 4% discount rate
+    years = list(range(project_life + 1))  # Year 0 to Year 20
+
+    # Cash flow components
+    capex_total = inputs_summary.get('nominal_electrolyser_capacity', 10) * 1900  # Approximate total CAPEX
+    annual_revenue = operating_outputs.get('Hydrogen Output for Fixed Operation [t/yr]', 100) * 350  # $350/tonne
+    # Calculate total OPEX for operational years
+    total_opex_annual = inputs_summary.get('nominal_electrolyser_capacity', 10) * 100  # Approximate annual OPEX
+    annual_opex = [total_opex_annual if year > 0 else capex_total for year in years]  # CAPEX in year 0, OPEX in subsequent years
+
+    # Calculate cash flows
+    undiscounted_cf = []
+    discounted_cf = []
+
+    for year in years:
+        if year == 0:
+            # Initial investment (negative cash flow)
+            cf = -capex_total
+        else:
+            # Operating years: revenue - OPEX
+            cf = annual_revenue - total_opex_annual
+
+        undiscounted_cf.append(cf)
+
+        # Apply discounting
+        if year > 0:
+            discounted_cf.append(cf / ((1 + discount_rate) ** year))
+        else:
+            discounted_cf.append(cf)  # Don't discount Year 0
+
+    cumulative_undiscounted = np.cumsum(undiscounted_cf)
+    cumulative_discounted = np.cumsum(discounted_cf)
+
+    # Create two columns for cash flow analysis
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.subheader("Annual Cash Flows")
+
+        fig_cf = go.Figure()
+
+        # Undiscounted cash flows
+        fig_cf.add_trace(go.Bar(
+            x=years,
+            y=undiscounted_cf,
+            name='Undiscounted CF',
+            marker_color='rgba(55, 128, 191, 0.7)',
+            showlegend=False
+        ))
+
+        fig_cf.update_layout(
+            title="Annual Cash Flows",
+            xaxis_title="Year",
+            yaxis_title="Cash Flow ($)",
+            height=400
+        )
+
+        st.plotly_chart(fig_cf, use_container_width=True)
+
+        # Cash Flow Summary
+        total_discounted_cf = sum(cf for cf in discounted_cf[1:])  # Exclude Year 0
+        total_discounted_cf_with_capex = sum(cf for cf in discounted_cf)
+        npv = total_discounted_cf_with_capex
+
+        st.metric(
+            label="Net Present Value (NPV)",
+            value=f"${npv:,.0f}",
+            help="Total discounted cash flows including initial capital"
+        )
+
+    with col2:
+        st.subheader("Cumulative Cash Flows")
+
+        fig_cumulative = go.Figure()
+
+        # Undiscounted cumulative
+        fig_cumulative.add_trace(go.Scatter(
+            x=years,
+            y=cumulative_undiscounted,
+            mode='lines+markers',
+            name='Undiscounted',
+            line=dict(color='#1f77b4', width=3)
+        ))
+
+        # Discounted cumulative
+        fig_cumulative.add_trace(go.Scatter(
+            x=years,
+            y=cumulative_discounted,
+            mode='lines+markers',
+            name='Discounted',
+            line=dict(color='#ff7f0e', width=3, dash='dot')
+        ))
+
+        # Payback period calculation
+        positive_cash_flow_years = [y for y, cf in enumerate(cumulative_discounted) if cf > 0]
+        payback_period = positive_cash_flow_years[0] if positive_cash_flow_years else 'Not achieved'
+
+        fig_cumulative.add_hline(
+            y=0,
+            line_dash="dash",
+            line_color="red",
+            annotation_text="Break-even Point"
+        )
+
+        fig_cumulative.update_layout(
+            title="Cumulative Discounted Cash Flows",
+            xaxis_title="Year",
+            yaxis_title="Cumulative Cash Flow ($)",
+            height=400,
+            showlegend=True
+        )
+
+        st.plotly_chart(fig_cumulative, use_container_width=True)
+
+        st.metric(
+            label="Break-even Period",
+            value=f"Year {payback_period}" if payback_period != 'Not achieved' else payback_period,
+            help="Year when cumulative discounted cash flows become positive"
+        )
+
+    # Detailed cash flow table
+    st.subheader("Cash Flow Details")
+
+    cf_df = pd.DataFrame({
+        'Year': years,
+        'Annual Cash Flow': undiscounted_cf,
+        'Discounted Cash Flow': discounted_cf,
+        'Cumulative Undiscounted': cumulative_undiscounted,
+        'Cumulative Discounted': cumulative_discounted
+    })
+
+    # Format monetary columns
+    monetary_cols = ['Annual Cash Flow', 'Discounted Cash Flow', 'Cumulative Undiscounted', 'Cumulative Discounted']
+    st.dataframe(cf_df.style.format({col: "${:,.0f}" for col in monetary_cols}), use_container_width=True)
+
+    # Financial indicators section
+    st.subheader("Financial Performance Indicators")
+
+    with st.expander("View Detailed Calculations", expanded=False):
+        # Levelized Cost of Hydrogen calculation
+        annual_h2_prod = operating_outputs.get('Hydrogen Output for Fixed Operation [t/yr]', 1)
+        total_discounted_cost = sum(cumulative_discounted) + capex_total if cumulative_discounted[-1] < 0 else 0
+
+        if annual_h2_prod > 0:
+            lcoh = -total_discounted_cost / (annual_h2_prod * project_life) if total_discounted_cost < 0 else 0
+
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                st.metric(
+                    label="Levelized Cost of Hydrogen",
+                    value=f"${lcoh:.2f}/kg" if lcoh > 0 else "Calculate from model",
+                    help="LCOH based on discounted cash flow analysis"
+                )
+
+            with col_b:
+                st.metric(
+                    label="Total Lifetime Revenue",
+                    value=f"${annual_revenue * project_life:,.0f}",
+                    help="Total revenue over project lifetime"
+                )
+
+        st.write(f"**Discount Rate Used:** {discount_rate*100:.1f}%")
+        st.write(f"**Project Life:** {project_life} years")
+        st.write(f"**Hydrogen Price:** $350 AUD per tonne")
+
+else:
+    st.info("Please go to the 'Inputs' page and run the calculation first.")
+
+# Keep placeholders for future development
+st.header("Additional Analysis Areas")
+with st.expander("Annual Operational Profile", expanded=False):
+    st.write("Detailed annual operational profile - to be expanded")
+
+with st.expander("Sensitivity & Risk Analysis", expanded=False):
+    st.write("Advanced sensitivity analysis and risk projections - future development")
 
 # Add S2D2 Lab footer
 add_s2d2_footer()
