@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Callable
 from datetime import datetime, timedelta
 import logging
 
@@ -593,27 +593,158 @@ class DataProcessor:
     def convert_units(self, value: float, from_unit: str, to_unit: str, conversion_factor: Optional[float] = None) -> float:
         """Convert between different units"""
 
-        # Basic unit conversion factors
-        unit_conversions = {
+        if from_unit == to_unit:
+            return value  # No conversion needed
+
+        # Energy units (MWh, GWh, TWh, kWh, W)
+        energy_conversions = {
             ('MWh', 'kWh'): 1000,
             ('kWh', 'MWh'): 0.001,
+            ('MWh', 'GWh'): 0.001,
+            ('GWh', 'MWh'): 1000,
+            ('MWh', 'TWh'): 0.000001,
+            ('TWh', 'MWh'): 1000000,
+            ('kWh', 'Wh'): 1000,
+            ('Wh', 'kWh'): 0.001,
+            ('GWh', 'TWh'): 0.001,
+            ('TWh', 'GWh'): 1000
+        }
+
+        # Power units (MW, GW, TW, kW, W)
+        power_conversions = {
             ('MW', 'kW'): 1000,
             ('kW', 'MW'): 0.001,
-            ('t', 'kg'): 1000,
-            ('kg', 't'): 0.001,
-            ('USD', 'EUR'): 0.85,  # Approximate conversion rate
-            ('USD', 'AUD'): 1.4,   # Approximate conversion rate
+            ('MW', 'GW'): 0.001,
+            ('GW', 'MW'): 1000,
+            ('MW', 'TW'): 0.000001,
+            ('TW', 'MW'): 1000000,
+            ('kW', 'W'): 1000,
+            ('W', 'kW'): 0.001,
+            ('GW', 'TW'): 0.001,
+            ('TW', 'GW'): 1000
+        }
+
+        # Hydrogen production units (t/day, kg/day, t/year, kg/year)
+        hydrogen_conversions = {
+            ('t/day', 'kg/day'): 1000,
+            ('kg/day', 't/day'): 0.001,
+            ('t/day', 't/year'): 365.25,
+            ('t/year', 't/day'): 1/365.25,
+            ('kg/day', 'kg/year'): 365.25,
+            ('kg/year', 'kg/day'): 1/365.25,
+            ('t/year', 'kg/year'): 1000,
+            ('kg/year', 't/year'): 0.001
+        }
+
+        # Hydrogen energy content conversions
+        hydrogen_energy_conversions = {
+            ('MWh/kg', 'kWh/kg'): 1000,
+            ('kWh/kg', 'MWh/kg'): 0.001,
+            ('MJ/kg', 'kWh/kg'): 1/3.6,  # 1 MJ = 3.6 kWh
+            ('kWh/kg', 'MJ/kg'): 3.6,
+            ('MWh/kg', 'MJ/kg'): 3600,  # 1 MWh = 3600 MJ
+            ('MJ/kg', 'MWh/kg'): 1/3600,
+            ('Btu/lb', 'MWh/kg'): 0.002928,  # Approximate conversion
+            ('MWh/kg', 'Btu/lb'): 341.214
+        }
+
+        # Currency conversions (approximate, latest rates)
+        currency_conversions = {
+            ('USD', 'EUR'): 0.88,    # 1 USD = 0.88 EUR (approximate)
+            ('EUR', 'USD'): 1.14,    # 1 EUR = 1.14 USD
+            ('USD', 'AUD'): 1.53,    # 1 USD = 1.53 AUD
+            ('AUD', 'USD'): 0.65,    # 1 AUD = 0.65 USD
+            ('USD', 'USD'): 1.0,     # 1 USD = 1 USD
+            ('EUR', 'EUR'): 1.0,
+            ('AUD', 'AUD'): 1.0
+        }
+
+        # Temperature conversions (Celsius, Fahrenheit, Kelvin)
+        temperature_conversions = {
+            ('C', 'F'): lambda x: (x * 9/5) + 32,
+            ('F', 'C'): lambda x: (x - 32) * 5/9,
+            ('C', 'K'): lambda x: x + 273.15,
+            ('K', 'C'): lambda x: x - 273.15,
+            ('F', 'K'): lambda x: (x - 32) * 5/9 + 273.15,
+            ('K', 'F'): lambda x: (x - 273.15) * 9/5 + 32,
+            ('C', 'C'): lambda x: x,
+            ('F', 'F'): lambda x: x,
+            ('K', 'K'): lambda x: x
+        }
+
+        # Time units conversions
+        time_conversions = {
+            ('year', 'day'): 365.25,
+            ('day', 'year'): 1/365.25,
+            ('year', 'hour'): 8766,  # 365.25 * 24
+            ('hour', 'year'): 1/8766,
+            ('day', 'hour'): 24,
+            ('hour', 'day'): 1/24,
+            ('hour', 'minute'): 60,
+            ('minute', 'hour'): 1/60,
+            ('day', 'minute'): 1440,
+            ('minute', 'day'): 1/1440
+        }
+
+        # Length/distance units
+        length_conversions = {
+            ('km', 'm'): 1000,
+            ('m', 'km'): 0.001,
+            ('km', 'mile'): 0.621371,
+            ('mile', 'km'): 1.60934,
+            ('m', 'ft'): 3.28084,
+            ('ft', 'm'): 0.3048,
+            ('km', 'ft'): 3280.84,
+            ('ft', 'km'): 0.0003048
+        }
+
+        # Area units
+        area_conversions = {
+            ('km²', 'm²'): 1000000,
+            ('m²', 'km²'): 1/1000000,
+            ('km²', 'acre'): 247.105,
+            ('acre', 'km²'): 1/247.105,
+            ('m²', 'ft²'): 10.7639,
+            ('ft²', 'm²'): 1/10.7639,
+            ('acre', 'ft²'): 43560,
+            ('ft²', 'acre'): 1/43560
+        }
+
+        # All conversion dictionaries
+        all_conversions = {
+            **energy_conversions,
+            **power_conversions,
+            **hydrogen_conversions,
+            **hydrogen_energy_conversions,
+            **currency_conversions,
+            **time_conversions,
+            **length_conversions,
+            **area_conversions
         }
 
         if conversion_factor is None:
             key = (from_unit, to_unit)
-            if key not in unit_conversions:
-                raise ValueError(f"No conversion factor available for {from_unit} to {to_unit}")
 
-            conversion_factor = unit_conversions[key]
+            # Check for special temperature conversions first
+            if from_unit in ['C', 'F', 'K'] or to_unit in ['C', 'F', 'K']:
+                if key in temperature_conversions:
+                    conversion_func = temperature_conversions[key]
+                    return conversion_func(value)
+                else:
+                    raise ValueError(f"Temperature conversion not supported: {from_unit} to {to_unit}")
+
+            # Regular linear conversions
+            if key in all_conversions:
+                conversion_factor = all_conversions[key]
+            else:
+                raise ValueError(f"No conversion factor available for {from_unit} to {to_unit}. Available conversions include energy (MWh, GWh, kWh), power (MW, GW, kW), hydrogen (kg, t), currency (USD, EUR, AUD), temperature (C, F, K), time, and length units.")
 
         if conversion_factor is None:
             raise ValueError("Conversion factor cannot be None")
+
+        # Handle both numeric and callable conversion factors (for temperature)
+        if callable(conversion_factor):
+            return conversion_factor(value)
 
         return value * conversion_factor
 

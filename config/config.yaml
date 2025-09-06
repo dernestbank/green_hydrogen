@@ -28,6 +28,69 @@ defaults:
   date_from: "2024-01-01"
   date_to: "2024-12-31"
 
+# Detailed electrolyser configuration (migrated from old_files/Config/config.yml)
+elec_max_load: 100  # %
+elec_reference_capacity: 10 # MW
+elec_cost_reduction: 1.0
+elec_equip: 1.0  # % of CAPEX
+elec_install: 0.0  # % of CAPEX
+elec_land: 0.0  # % of CAPEX
+
+# Electrolyser type-specific parameters
+ae:
+  elec_min_load: 20  # %
+  elec_overload: 100 # %. Only used if greater than elec_max_load
+  elec_overload_recharge: 0 # hours between overloading events
+  spec_consumption: 4.5  # kWh/Nm3
+  stack_lifetime: 80000  # hours before replacement
+  electrolyser_capex: 1000   # A$/kW
+  electrolyser_om: 2.5   # % of electrolyser capex
+  water_needs: 10 # L/kg
+
+pem:
+  elec_min_load: 10  # %
+  elec_overload: 120 # %. Only used if greater than elec_max_load
+  elec_overload_recharge: 4 # hours between overloading events
+  spec_consumption: 4.7  # kWh/Nm3
+  stack_lifetime: 60000  # hours before replacement
+  electrolyser_capex: 1000   # A$/kW
+  electrolyser_om: 4   #  % of electrolyser capex
+  water_needs: 10 # L/kg
+
+h2_vol_to_mass: 0.089  # kg/m3
+elec_efficiency: 83  # %
+
+# Degradation parameters
+stack_degradation: 0 # %/yr
+stack_deg_max: 0 # %
+solar_degradation: 0 # %/yr
+wind_degradation: 0 # %/yr
+
+# Battery parameters
+battery_efficiency: 85  # %
+battery_min: 0.0  # %
+battery_lifetime: 10 # years
+
+# Cost parameters
+solar_capex: 1120  # A$/kW
+solar_opex: 16990  # A$/MW
+wind_capex: 1942   # A$/kW
+wind_opex: 25000  # A$/MW
+powerplant_reference_capacity: 1  # MW
+powerplant_cost_reduction: 1.0
+powerplant_equip: 1.0  # % of CAPEX
+powerplant_install: 0.0  # % of CAPEX
+powerplant_land: 0.0  # % of CAPEX
+
+battery_capex: {0: 0, 1: 827, 2: 542, 4: 446, 8: 421}  # A$/kWh
+battery_opex: {0: 0, 1: 4833, 2: 9717, 4: 19239, 8: 39314}  # A$/MW
+battery_replacement: 100 # % of capital
+electrolyser_stack_cost: 40   # % of electrolyser capex
+water_cost: 5  # A$/kL
+discount_rate: 4  # %
+project_life: 20  # years
+
+# Legacy electrolyser configuration for backward compatibility
 electrolyser:
   default_type: "PEM"
   PEM:

@@ -56,6 +56,7 @@ class TestRenewablesNinjaAPI:
         mock_response = Mock()
         mock_response.json.return_value = MOCK_SOLAR_RESPONSE
         mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'X-RateLimit-Remaining': '10'}
         mock_get.return_value = mock_response
 
         # Call the method
@@ -82,6 +83,7 @@ class TestRenewablesNinjaAPI:
         mock_response = Mock()
         mock_response.json.return_value = MOCK_WIND_RESPONSE
         mock_response.raise_for_status.return_value = None
+        mock_response.headers = {'X-RateLimit-Remaining': '10'}
         mock_get.return_value = mock_response
 
         result = api_client.get_wind_data(-33.8688, 151.2093, "2024-01-01", "2024-01-02", 100)

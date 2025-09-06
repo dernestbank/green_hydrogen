@@ -1,10 +1,13 @@
 
 .qodo
 .vscode
-__pycache__
-
+.github
+.claude
+.pytest_cache
 prompts
 tasks
 old_files
 attachments
 about
+__pycache__
+
