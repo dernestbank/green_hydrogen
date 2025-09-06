@@ -269,7 +269,7 @@ if st.session_state.model_results:
             else:
                 st.info("No wind data available for the selected location.")
 
-        # Data quality indicators
+        # Enhanced data quality indicators
         st.markdown("---")
         st.subheader("📈 Data Quality Indicators")
 
@@ -279,13 +279,201 @@ if st.session_state.model_results:
         st.write(f"**Data Source:** Renewables Ninja API")
         st.write(f"**Total API Calls:** {len(api_data)}")
 
-        # Cache information if available
-        if 'cache_info' in results:
-            cache_info = results['cache_info']
-            with st.expander("Cache Information"):
-                st.write(f"Cache Hits: {cache_info.get('hits', 0)}")
-                st.write(f"Cache Misses: {cache_info.get('misses', 0)}")
-                st.write(f"Total Requests: {cache_info.get('total', 0)}")
+        # Data Quality Tabs
+        quality_tabs = st.tabs(["Overview", "Completeness", "Outliers", "Consistency", "Performance"])
+
+        # Overview Tab
+        with quality_tabs[0]:
+            col1, col2, col3 = st.columns(3)
+
+            total_records = 0
+            complete_records = 0
+
+            # Calculate overall data quality
+            for key, data_dict in api_data.items():
+                if isinstance(data_dict, dict) and 'data' in data_dict:
+                    data = data_dict['data']
+                    if isinstance(data, dict) and 'capacity_factor' in data:
+                        total_records += len(data['capacity_factor'])
+                        complete_records += sum(1 for cf in data['capacity_factor'] if cf is not None and not pd.isna(cf))
+
+            data_coverage = complete_records / total_records if total_records > 0 else 0
+
+            with col1:
+                st.metric("Total Records", f"{total_records:,}")
+            with col2:
+                st.metric("Complete Records", f"{complete_records:,}")
+            with col3:
+                st.metric("Data Coverage", f"{data_coverage:.1%}")
+
+            # Quality score
+            quality_score = data_coverage * 100
+            if quality_score >= 95:
+                st.success(f"✅ **Overall Quality Score: {quality_score:.1f}%** - Excellent data completeness")
+            elif quality_score >= 80:
+                st.warning(f"⚠️ **Overall Quality Score: {quality_score:.1f}%** - Good data completeness")
+            else:
+                st.error(f"❌ **Overall Quality Score: {quality_score:.1f}%** - Data completeness needs attention")
+
+        # Completeness Tab
+        with quality_tabs[1]:
+            st.subheader("Data Completeness Analysis")
+
+            completeness_data = []
+            for key, data_dict in api_data.items():
+                if isinstance(data_dict, dict) and 'data' in data_dict:
+                    data = data_dict['data']
+                    if isinstance(data, dict):
+                        data_type = 'Solar' if 'irradiance' in data else 'Wind'
+                        location_name = key.replace('solar_', '').replace('wind_', '').replace('_', ' ').title()
+
+                        for field in ['capacity_factor', 'irradiance', 'wind_speed', 'temperature']:
+                            if field in data and data[field]:
+                                total = len(data[field])
+                                non_null = sum(1 for val in data[field] if val is not None and not pd.isna(val))
+                                completeness = non_null / total if total > 0 else 0
+                                completeness_data.append({
+                                    'Data Type': data_type,
+                                    'Location': location_name,
+                                    'Field': field.replace('_', ' ').title(),
+                                    'Completeness': completeness,
+                                    'Missing': total - non_null
+                                })
+
+            if completeness_data:
+                comp_df = pd.DataFrame(completeness_data)
+                st.dataframe(comp_df.style.format({
+                    'Completeness': '{:.1%}',
+                    'Missing': '{:,}'
+                }), use_container_width=True)
+
+                # Completeness visualization
+                fig_comp = go.Figure()
+                for data_type in comp_df['Data Type'].unique():
+                    type_data = comp_df[comp_df['Data Type'] == data_type]
+                    fig_comp.add_trace(go.Bar(
+                        name=data_type,
+                        x=type_data['Field'],
+                        y=type_data['Completeness'],
+                        text=[f"{x:.1%}" for x in type_data['Completeness']],
+                        textposition='auto'
+                    ))
+
+                fig_comp.update_layout(
+                    title="Data Completeness by Field",
+                    xaxis_title="Field",
+                    yaxis_title="Completeness (%)",
+                    height=400
+                )
+                st.plotly_chart(fig_comp, use_container_width=True)
+
+        # Outliers Tab
+        with quality_tabs[2]:
+            st.subheader("Outlier Detection")
+
+            outlier_data = []
+            for key, data_dict in api_data.items():
+                if isinstance(data_dict, dict) and 'data' in data_dict:
+                    data = data_dict['data']
+                    if isinstance(data, dict) and 'capacity_factor' in data:
+                        data_type = 'Solar' if 'irradiance' in data else 'Wind'
+                        location_name = key.replace('solar_', '').replace('wind_', '').replace('_', ' ').title()
+
+                        cf_values = [x for x in data['capacity_factor'] if x is not None and not pd.isna(x)]
+                        if cf_values:
+                            q1, q3 = pd.Series(cf_values).quantile([0.25, 0.75])
+                            iqr = q3 - q1
+                            lower_bound = q1 - 1.5 * iqr
+                            upper_bound = q3 + 1.5 * iqr
+
+                            outliers = sum(1 for x in cf_values if x < lower_bound or x > upper_bound)
+                            outlier_pct = outliers / len(cf_values)
+
+                            outlier_data.append({
+                                'Data Type': data_type,
+                                'Location': location_name,
+                                'Total Values': len(cf_values),
+                                'Outliers': outliers,
+                                'Outlier Rate': outlier_pct,
+                                'Range': f"[{lower_bound:.3f}, {upper_bound:.3f}]"
+                            })
+
+            if outlier_data:
+                outlier_df = pd.DataFrame(outlier_data)
+                st.dataframe(outlier_df.style.format({
+                    'Outlier Rate': '{:.1%}'
+                }), use_container_width=True)
+
+                # Outlier visualization
+                fig_outlier = go.Figure()
+                for idx, row in outlier_df.iterrows():
+                    fig_outlier.add_trace(go.Bar(
+                        name=f"{row['Data Type']} - {row['Location']}",
+                        x=['Total Values', 'Outliers'],
+                        y=[row['Total Values'], row['Outliers']],
+                        text=[f"{row['Total Values']:,}", f"{row['Outliers']:,}"],
+                        textposition='auto'
+                    ))
+
+                fig_outlier.update_layout(
+                    title="Outlier Analysis",
+                    xaxis_title="Metric",
+                    yaxis_title="Count",
+                    height=400,
+                    barmode='group'
+                )
+                st.plotly_chart(fig_outlier, use_container_width=True)
+            else:
+                st.info("No data available for outlier analysis")
+
+        # Consistency Tab
+        with quality_tabs[3]:
+            st.subheader("Data Consistency Checks")
+
+            consistency_issues = []
+            for key, data_dict in api_data.items():
+                if isinstance(data_dict, dict) and 'data' in data_dict:
+                    data = data_dict['data']
+                    if isinstance(data, dict):
+                        data_type = 'Solar' if 'irradiance' in data else 'Wind'
+                        location_name = key.replace('solar_', '').replace('wind_', '').replace('_', ' ').title()
+
+                        if data_type == 'Solar' and 'irradiance' in data and 'capacity_factor' in data:
+                            irradiance = [x for x in data['irradiance'] if x is not None and not pd.isna(x)]
+                            cap_factor = [x for x in data['capacity_factor'] if x is not None and not pd.isna(x)]
+                            if len(irradiance) > 10:
+                                corr = pd.Series(irradiance).corr(pd.Series(cap_factor[:len(irradiance)]))
+                                if corr < 0.5:
+                                    consistency_issues.append({
+                                        'Check': 'Solar: Irradiance vs Capacity Factor',
+                                        'Location': location_name,
+                                        'Correlation': corr,
+                                        'Status': 'Low Correlation'
+                                    })
+
+            if consistency_issues:
+                cons_df = pd.DataFrame(consistency_issues)
+                st.dataframe(cons_df.style.format({
+                    'Correlation': '{:.3f}'
+                }), use_container_width=True)
+            else:
+                st.success("✅ No data consistency issues detected")
+
+        # Performance Tab
+        with quality_tabs[4]:
+            st.subheader("Performance Metrics")
+
+            # Cache information
+            if 'cache_info' in results:
+                cache_info = results['cache_info']
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Cache Hits", f"{cache_info.get('hits', 0):,}")
+                with col2:
+                    st.metric("Cache Misses", f"{cache_info.get('misses', 0):,}")
+                with col3:
+                    hit_rate = cache_info.get('hits', 0) / max(cache_info.get('total', 1), 1) * 100
+                    st.metric("Hit Rate", f"{hit_rate:.1f}%")
 
 else:
     st.info("Please go to the 'Inputs' page and run the calculation first.")
