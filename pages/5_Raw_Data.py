@@ -3,6 +3,7 @@ from utils import add_s2d2_footer
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from io import BytesIO
 
 st.set_page_config(layout="wide")
 
@@ -34,7 +35,30 @@ if st.session_state.model_results:
     # Display options
     show_chart = st.sidebar.checkbox("Show Chart", value=True)
     show_table = st.sidebar.checkbox("Show Data Table", value=True)
-    export_data = st.sidebar.checkbox("Enable Export", value=False)
+
+    # Export options - initialize defaults
+    enable_export = False
+    export_format = "CSV"
+    export_with_quality = False
+    export_timestamp = True
+
+    with st.sidebar.expander("Export Options"):
+        enable_export = st.checkbox("Enable Export Functionality", value=False)
+        if enable_export:
+            export_format = st.selectbox(
+                "Export Format",
+                ["CSV", "Excel"],
+                help="Choose the export file format"
+            )
+            export_with_quality = st.checkbox(
+                "Include Quality Metrics",
+                help="Add data quality information to the export"
+            )
+            export_timestamp = st.checkbox(
+                "Include Timestamp",
+                value=True,
+                help="Add export timestamp to filename"
+            )
 
     # Get the API data from session state
     api_data = results.get('api_responses', {})
@@ -142,17 +166,62 @@ if st.session_state.model_results:
                         with col3:
                             st.metric("Avg Irradiance", f"{solar_df['irradiance'].mean():.0f} W/m²")
 
-                # Export functionality
-                if export_data and not solar_df.empty:
-                    st.subheader("Export Data")
-                    csv = solar_df.to_csv(index=False)
+                # Enhanced Export functionality
+                if enable_export and not solar_df.empty:
+                    st.subheader("📥 Export Solar Data")
+
+                    # Generate filename with timestamp if requested
+                    timestamp = f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if export_timestamp else ""
+                    base_name = "solar_raw_data"
+
+                    # Prepare data for export
+                    export_df = solar_df.copy()
+                    if export_with_quality:
+                        # Add quality metrics to the data
+                        export_df['data_quality_score'] = len(export_df.dropna()) / len(export_df) * 100
+                        export_df['has_outliers'] = False  # Would need outlier detection logic
+
+                    if export_format == "CSV":
+                        export_data = export_df.to_csv(index=False)
+                        mime_type = "text/csv"
+                        file_extension = ".csv"
+                    else:  # Excel
+                        output = BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            export_df.to_excel(writer, sheet_name='Solar_Data', index=False)
+                            if export_with_quality:
+                                # Add quality metrics sheet
+                                quality_df = pd.DataFrame({
+                                    'Metric': ['Completeness', 'Total Records', 'Avg Capacity Factor'],
+                                    'Value': [
+                                        len(export_df.dropna()) / len(export_df) * 100,
+                                        len(export_df),
+                                        export_df['capacity_factor'].mean()
+                                    ]
+                                })
+                                quality_df.to_excel(writer, sheet_name='Quality_Metrics', index=False)
+                        export_data = output.getvalue()
+                        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        file_extension = ".xlsx"
+
+                    filename = f"{base_name}{timestamp}{file_extension}"
+
                     st.download_button(
-                        label="Download Solar Data as CSV",
-                        data=csv,
-                        file_name="solar_raw_data.csv",
-                        mime="text/csv",
-                        key="download_solar_csv"
+                        label=f"Download Solar Data ({export_format})",
+                        data=export_data,
+                        file_name=filename,
+                        mime=mime_type,
+                        key="download_solar_data"
                     )
+
+                    # Export statistics
+                    with st.expander("Export Summary"):
+                        st.write(f"📊 **Export Details:**")
+                        st.write(f"- Records: {len(export_df):,}")
+                        st.write(f"- Date Range: {export_df['timestamp'].min()} to {export_df['timestamp'].max()}")
+                        st.write(f"- Avg Capacity Factor: {export_df['capacity_factor'].mean():.3f}")
+                        if 'irradiance' in export_df.columns:
+                            st.write(f"- Avg Irradiance: {export_df['irradiance'].mean():.0f} W/m²")
             else:
                 st.info("No solar data available for the selected location.")
 
@@ -255,21 +324,127 @@ if st.session_state.model_results:
                         with col3:
                             st.metric("Avg Wind Speed", f"{wind_df['wind_speed'].mean():.1f} m/s")
 
-                # Export functionality
-                if export_data and not wind_df.empty:
-                    st.subheader("Export Data")
-                    csv = wind_df.to_csv(index=False)
+                # Enhanced Export functionality
+                if enable_export and not wind_df.empty:
+                    st.subheader("📥 Export Wind Data")
+
+                    # Generate filename with timestamp if requested
+                    timestamp = f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if export_timestamp else ""
+                    base_name = "wind_raw_data"
+
+                    # Prepare data for export
+                    export_df = wind_df.copy()
+                    if export_with_quality:
+                        # Add quality metrics to the data
+                        export_df['data_quality_score'] = len(export_df.dropna()) / len(export_df) * 100
+                        export_df['has_outliers'] = False  # Would need outlier detection logic
+
+                    if export_format == "CSV":
+                        export_data = export_df.to_csv(index=False)
+                        mime_type = "text/csv"
+                        file_extension = ".csv"
+                    else:  # Excel
+                        output = BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            export_df.to_excel(writer, sheet_name='Wind_Data', index=False)
+                            if export_with_quality:
+                                # Add quality metrics sheet
+                                quality_df = pd.DataFrame({
+                                    'Metric': ['Completeness', 'Total Records', 'Avg Capacity Factor'],
+                                    'Value': [
+                                        len(export_df.dropna()) / len(export_df) * 100,
+                                        len(export_df),
+                                        export_df['capacity_factor'].mean()
+                                    ]
+                                })
+                                quality_df.to_excel(writer, sheet_name='Quality_Metrics', index=False)
+                        export_data = output.getvalue()
+                        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        file_extension = ".xlsx"
+
+                    filename = f"{base_name}{timestamp}{file_extension}"
+
                     st.download_button(
-                        label="Download Wind Data as CSV",
-                        data=csv,
-                        file_name="wind_raw_data.csv",
-                        mime="text/csv",
-                        key="download_wind_csv"
+                        label=f"Download Wind Data ({export_format})",
+                        data=export_data,
+                        file_name=filename,
+                        mime=mime_type,
+                        key="download_wind_data"
                     )
+
+                    # Export statistics
+                    with st.expander("Export Summary"):
+                        st.write(f"📊 **Export Details:**")
+                        st.write(f"- Records: {len(export_df):,}")
+                        st.write(f"- Date Range: {export_df['timestamp'].min()} to {export_df['timestamp'].max()}")
+                        st.write(f"- Avg Capacity Factor: {export_df['capacity_factor'].mean():.3f}")
+                        if 'wind_speed' in export_df.columns:
+                            st.write(f"- Avg Wind Speed: {export_df['wind_speed'].mean():.1f} m/s")
             else:
                 st.info("No wind data available for the selected location.")
-
-        # Enhanced data quality indicators
+    
+            # Bulk Export Option
+            if enable_export and len(api_data) > 1:
+                st.markdown("---")
+                st.subheader("📤 Bulk Export All Data")
+    
+                if st.button("Export All Data Sources"):
+                    # Prepare bulk export
+                    export_data_sources = {}
+    
+                    for key, data_dict in api_data.items():
+                        if isinstance(data_dict, dict) and 'data' in data_dict:
+                            data = data_dict['data']
+                            if isinstance(data, dict):
+                                data_type = 'Solar' if 'irradiance' in data else 'Wind'
+                                location_name = key.replace('solar_', '').replace('wind_', '').replace('_', ' ').title()
+    
+                                df = pd.DataFrame({
+                                    'timestamp': pd.to_datetime(data.get('metadata', {}).get('timestamps', [])),
+                                    'capacity_factor': data.get('capacity_factor', []),
+                                    'data_type': [data_type] * len(data.get('capacity_factor', [])),
+                                    'location': [location_name] * len(data.get('capacity_factor', []))
+                                }).dropna()
+    
+                                if data_type == 'Solar' and 'irradiance' in data:
+                                    df['irradiance'] = data.get('irradiance', [])[:len(df)]
+                                elif data_type == 'Wind' and 'wind_speed' in data:
+                                    df['wind_speed'] = data.get('wind_speed', [])[:len(df)]
+    
+                                export_data_sources[f"{data_type}_{location_name}"] = df
+    
+                    # Create Excel file with multiple sheets
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        # Summary sheet
+                        summary_df = pd.DataFrame({
+                            'Data Source': list(export_data_sources.keys()),
+                            'Records': [len(df) for df in export_data_sources.values()],
+                            'Date Range Start': [df['timestamp'].min() for df in export_data_sources.values()],
+                            'Date Range End': [df['timestamp'].max() for df in export_data_sources.values()],
+                            'Avg Capacity Factor': [df['capacity_factor'].mean() for df in export_data_sources.values()]
+                        })
+                        summary_df.to_excel(writer, sheet_name='Summary', index=False)
+    
+                        # Individual data sheets
+                        for sheet_name, df in export_data_sources.items():
+                            # Excel sheet names have length limits and can't contain special chars
+                            safe_sheet_name = sheet_name.replace(' ', '_')[:30]
+                            df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+    
+                    bulk_filename = f"hydrogen_raw_data_bulk_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+                    st.download_button(
+                        label="Download Bulk Data (Excel)",
+                        data=output.getvalue(),
+                        file_name=bulk_filename,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="download_bulk_data"
+                    )
+    
+                    st.success(f"✅ Bulk export ready! File contains {len(export_data_sources)} data sources with {sum(len(df) for df in export_data_sources.values()):,} total records.")
+    
+            # Enhanced data quality indicators
         st.markdown("---")
         st.subheader("📈 Data Quality Indicators")
 
