@@ -1,0 +1,20 @@
+metadata:
+  name: Wind + Battery
+  description: 'Default preset: Wind + Battery'
+  created_date: '2025-09-08T11:19:48.008107'
+  modified_date: '2025-09-08T11:19:48.008107'
+  version: '2.0'
+  author: System
+configuration:
+  location: REZ-W1
+  electrolyser_type: PEM
+  nominal_electrolyser_capacity: 10.0
+  nominal_solar_farm_capacity: 0.0
+  nominal_wind_farm_capacity: 15.0
+  battery_power_rating: 2.0
+  battery_storage_duration: 4.0
+  hourly_electricity_price: 35.0
+  hydrogen_selling_price: 320.0
+  discount_rate: 0.04
+  project_life: 20
+timestamp: '2025-09-08T11:19:48.008627'

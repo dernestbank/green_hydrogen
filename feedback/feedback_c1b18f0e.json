@@ -1,0 +1,17 @@
+{
+  "id": "c1b18f0e-9500-45c1-acdb-7d8714857315",
+  "type": "performance",
+  "session_id": "75c290d2-2acf-44a6-8182-c70e838bbad7",
+  "timestamp": "2025-09-07T22:49:28.996649",
+  "operation": "test_operation",
+  "metrics": {
+    "execution_time_seconds": 2.5,
+    "memory_used_mb": 100.0
+  },
+  "user_rating": 4,
+  "comments": "",
+  "system_info": {
+    "platform": "unknown",
+    "error": "psutil not available"
+  }
+}

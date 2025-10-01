@@ -20,17 +20,17 @@ if st.session_state.model_results:
     wind_capacity = inputs_summary.get('nominal_wind_farm_capacity', 0)
     battery_power = inputs_summary.get('battery_rated_power', 2)
 
-    # CAPEX components (A$/kW) - scaled appropriately
+    # CAPEX components ($/kW) - scaled appropriately
     capex_breakdown = {
-        'Solar PV System': solar_capacity * 1100,  # A$/kW
-        'Wind Turbine System': wind_capacity * 1600,  # A$/kW
-        'Battery Storage': battery_power * 400,  # A$/kW (4-hour system)
-        'Electrolyser System': inputs_summary.get('nominal_electrolyser_capacity', 10) * 800,  # A$/kW
-        'Electrical Infrastructure': (solar_capacity + wind_capacity) * 300,  # A$/kW
-        'General Facilities': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 200,  # A$/kW
-        'Engineering & Supervision': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 150,  # A$/kW
-        'Other Costs': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 100,  # A$/kW
-        'Owner\'s Costs': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 150   # A$/kW
+        'Solar PV System': solar_capacity * 1100,  # $/kW
+        'Wind Turbine System': wind_capacity * 1600,  # $/kW
+        'Battery Storage': battery_power * 400,  # $/kW (4-hour system)
+        'Electrolyser System': inputs_summary.get('nominal_electrolyser_capacity', 10) * 800,  # $/kW
+        'Electrical Infrastructure': (solar_capacity + wind_capacity) * 300,  # $/kW
+        'General Facilities': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 200,  # $/kW
+        'Engineering & Supervision': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 150,  # $/kW
+        'Other Costs': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 100,  # $/kW
+        'Owner\'s Costs': (solar_capacity + wind_capacity + inputs_summary.get('nominal_electrolyser_capacity', 10)) * 150   # $/kW
     }
 
     # Remove zero values
@@ -547,7 +547,7 @@ if st.session_state.model_results:
         fig_contribution.update_layout(
             title="Cost Contribution to LCOH by Component",
             xaxis_title="Component",
-            yaxis_title="Cost per kg H₂ (A$/kg)",
+            yaxis_title="Cost per kg H₂ ($/kg)",
             height=400,
             xaxis_tickangle=45
         )
@@ -563,7 +563,7 @@ if st.session_state.model_results:
 
         contribution_df = pd.DataFrame({
             'Component': list(component_cost_per_kg.keys()),
-            'Cost per kg H₂ (A$/kg)': [f"{v:.4f}" for v in component_cost_per_kg.values()],
+            'Cost per kg H₂ ($/kg)': [f"{v:.4f}" for v in component_cost_per_kg.values()],
             'Percentage of Total': [f"{component_percentages[comp]:.1f}%" for comp in component_cost_per_kg.keys()],
             'Annualized Cost (NPW)': [f"${npw:,.0f}" for npw in component_npw.values()]
         })
@@ -577,11 +577,11 @@ if st.session_state.model_results:
         with st.expander("Key Insights", expanded=True):
             st.write("**Top Cost Contributors:**")
             for comp, cost in top_contributors:
-                st.write(f"• {comp}: A${cost:.4f}/kg")
+                st.write(f"• {comp}: ${cost:.4f}/kg")
 
             st.write("\n**Lowest Cost Contributors:**")
             for comp, cost in lowest_contributors:
-                st.write(f"• {comp}: A${cost:.4f}/kg")
+                st.write(f"• {comp}: ${cost:.4f}/kg")
 
     # Sensitivity Analysis for key components
     st.subheader("Component Cost Sensitivity Analysis")
@@ -602,7 +602,7 @@ if st.session_state.model_results:
                 sensitivity_data.append({
                     'Component': comp,
                     'Variation': f"{((factor-1)*100):+.0f}%" if factor != 1.0 else 'Base',
-                    'LCOH Impact (A$/kg)': lcoh_adjusted
+                    'LCOH Impact ($/kg)': lcoh_adjusted
                 })
 
     sensitivity_df = pd.DataFrame(sensitivity_data)
@@ -615,7 +615,7 @@ if st.session_state.model_results:
             comp_data = sensitivity_df[sensitivity_df['Component'] == comp]
             fig_sensitivity.add_trace(go.Scatter(
                 x=comp_data['Variation'],
-                y=comp_data['LCOH Impact (A$/kg)'],
+                y=comp_data['LCOH Impact ($/kg)'],
                 mode='lines+markers',
                 name=comp,
             ))
@@ -623,7 +623,7 @@ if st.session_state.model_results:
     fig_sensitivity.update_layout(
         title="Sensitivity of LCOH to Key Component Cost Changes",
         xaxis_title="Cost Variation",
-        yaxis_title="LCOH (A$/kg)",
+        yaxis_title="LCOH ($/kg)",
         height=400,
         showlegend=True
     )
@@ -631,7 +631,7 @@ if st.session_state.model_results:
     st.plotly_chart(fig_sensitivity, use_container_width=True)
 
     with st.expander("Sensitivity Data Table"):
-        st.dataframe(sensitivity_df.style.format({'LCOH Impact (A$/kg)': "{:.4f}"}))
+        st.dataframe(sensitivity_df.style.format({'LCOH Impact ($/kg)': "{:.4f}"}))
 
 else:
     st.info("Please go to the 'Inputs' page and run the calculation first.")

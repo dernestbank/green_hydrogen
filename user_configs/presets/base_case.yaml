@@ -1,0 +1,20 @@
+metadata:
+  name: Base Case
+  description: 'Default preset: Base Case'
+  created_date: '2025-09-08T11:19:48.007059'
+  modified_date: '2025-09-08T11:19:48.007059'
+  version: '2.0'
+  author: System
+configuration:
+  location: US.CA
+  electrolyser_type: PEM
+  nominal_electrolyser_capacity: 10.0
+  nominal_solar_farm_capacity: 10.0
+  nominal_wind_farm_capacity: 0.0
+  battery_power_rating: 0.0
+  battery_storage_duration: 0.0
+  hourly_electricity_price: 40.0
+  hydrogen_selling_price: 350.0
+  discount_rate: 0.04
+  project_life: 20
+timestamp: '2025-09-08T11:19:48.007059'

@@ -611,8 +611,8 @@ class KPICalculator:
         if 'financial_results' in model_results:
             finance = model_results['financial_results']
             kpis['financial_metrics'] = {
-                'lcoh_fixed': finance.get('LCOH - Fixed Consumption (A$/kg)', 0),
-                'lcoh_variable': finance.get('LCOH - Variable Consumption (A$/kg)', 0),
+                'lcoh_fixed': finance.get('LCOH - Fixed Consumption ($/kg)', 0),
+                'lcoh_variable': finance.get('LCOH - Variable Consumption ($/kg)', 0),
                 'payback_period': self.calculate_payback_period(
                     finance.get('capex', 0),
                     finance.get('annual_profit', 0),

@@ -50,7 +50,7 @@ if st.session_state.model_results:
         # Create model instance and generate hourly data
         try:
             model = HydrogenModel(
-                location=inputs_summary.get('location', 'REZ-N1'),
+                location=inputs_summary.get('location', 'US.CA'),
                 elec_type='PEM' if inputs_summary.get('electrolyser_type', 'PEM') == 'PEM' else 'AE',
                 elec_capacity=inputs_summary.get('nominal_electrolyser_capacity', 10),
                 solar_capacity=inputs_summary.get('nominal_solar_farm_capacity', 10),

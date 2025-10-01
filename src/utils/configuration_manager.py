@@ -201,7 +201,7 @@ class ConfigurationManager:
 
         presets = {
             "Base Case": {
-                "location": "REZ-N1",
+                "location": "US.CA",
                 "electrolyser_type": "PEM",
                 "nominal_electrolyser_capacity": 10.0,
                 "nominal_solar_farm_capacity": 10.0,

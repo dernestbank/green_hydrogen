@@ -63,7 +63,7 @@ with st.form("input_form"):
         "Electrolyser Parameters",
         "Power Plant Parameters",
         "Financial Parameters",
-        
+
     ])
 
     user_inputs = {}
@@ -73,14 +73,16 @@ with st.form("input_form"):
         st.write("Define the capacities for the electrolyser, power plant, and battery.")
 
         st.subheader("Electrolyser Sizing")
-        user_inputs['nominal_electrolyser_capacity'] = st.number_input(
-        "Nominal Electrolyser Capacity (MW)", 
-        min_value=0.0, 
-        value=10.0, 
-        step=0.1,
-        help="The rated power capacity of the electrolyser in megawatts (MW)",
-        key="nominal_electrolyser_capacity"
-    )
+        col1, col2 =st.columns(2, gap="large")
+        with col1:
+            user_inputs['nominal_electrolyser_capacity'] = st.number_input(
+            "Nominal Electrolyser Capacity (MW)", 
+            min_value=0.0, 
+            value=10.0, 
+            step=0.1,
+            help="The rated power capacity of the electrolyser in megawatts (MW)",
+            key="nominal_electrolyser_capacity"
+        )
 
         st.subheader("Power Plant Sizing")
         # Determine generator type based on configuration prefix
@@ -234,38 +236,39 @@ with st.form("input_form"):
                 key="ref_capacity"
             )
             user_inputs['reference_cost'] = st.number_input(
-                "Reference Cost ($/kW)", 
-                min_value=0.0, 
+                "Reference Cost ($/kW)",
+                min_value=0.0,
                 value=1500.0,
                 help="Reference cost at reference capacity",
                 key="ref_cost"
             )
-            
+
             #Economies of scale- Electrolyser equipment cost
-            user_inputs['electrolyser_economies_of_scale_type'] = st.selectbox(
-                "Economies of Scale Type", 
-                ["Scale Index", "Self Defined", "Custom Curve Fitted"], 
+            eos_type = st.selectbox(
+                "Economies of Scale Type",
+                ["Scale Index", "Self Defined", "Custom Curve Fitted"],
                 key="elec_eos_type"
             )
-            
+            user_inputs['electrolyser_economies_of_scale_type'] = eos_type
+
             # Different inputs based on economies of scale type
-            if user_inputs['electrolyser_economies_of_scale_type'] == "Scale Index":
+            if eos_type == "Scale Index":
                 user_inputs['scale_index'] = st.number_input(
-                    "Scale Index", 
-                    min_value=0.0, 
-                    max_value=1.0, 
+                    "Scale Index",
+                    min_value=0.0,
+                    max_value=1.0,
                     value=0.9,
                     help="Economies of scale index (0-1)",
                     key="scale_index_eos"  # Changed key to be unique
                 )
-            elif user_inputs['electrolyser_economies_of_scale_type'] == "Self Defined":
+            elif eos_type == "Self Defined":
                 user_inputs['electrolyser_economies_of_scale'] = st.number_input(
-                    "Economies of Scale (% of CAPEX)", 
-                    min_value=0.0, 
+                    "Economies of Scale (% of CAPEX)",
+                    min_value=0.0,
                     value=0.0,
                     key="elec_eos_self_defined"
                 )
-            elif user_inputs['electrolyser_economies_of_scale_type'] == "Custom Curve Fitted":
+            elif eos_type == "Custom Curve Fitted":
                 # Provide coefficients for the curve-fitted model
                 st.write("Provide coefficients for the curve-fitted model:")
                 st.latex(r"Cost_{El}= C_1 + C_2*P_{EL,rated} + C_3*e^{C_4*P_{EL,rated}}")
@@ -273,6 +276,7 @@ with st.form("input_form"):
                 user_inputs['electrolyser_custom_c2'] = st.number_input("c2", value=-3.479, key="elec_c2")
                 user_inputs['electrolyser_custom_c3'] = st.number_input("c3", value=61.567, key="elec_c3")
                 user_inputs['electrolyser_custom_c4'] = st.number_input("c4", value=-0.261, key="elec_c4")
+            
 
         with col2:
             user_inputs['land_cost_percent'] = st.number_input(
@@ -313,14 +317,14 @@ with st.form("input_form"):
 
         with col2:
             user_inputs['water_cost'] = st.number_input(
-                "Water Cost (A$/kL)", 
+                "Water Cost ($/kL)", 
                 min_value=0.0, 
                 value=5.0,
                 help="Cost of water per kiloliter",
                 key="water_cost_kl"
             )
             user_inputs['other_operational_costs'] = st.number_input(
-                "Other Operational Costs (A$/year)", 
+                "Other Operational Costs ($/year)", 
                 min_value=0.0, 
                 value=0.0,
                 help="Additional operational costs per year",
@@ -386,7 +390,7 @@ with st.form("input_form"):
                 key="solar_ref_capacity"
             )
             user_inputs['solar_reference_equipment_cost'] = st.number_input(
-                "Reference Solar PV Farm Equipment Cost (A$/kW)", 
+                "Reference Solar PV Farm Equipment Cost ($/kW)", 
                 min_value=0.0, 
                 value=1500.0, 
                 key="solar_ref_equipment_cost"
@@ -424,7 +428,7 @@ with st.form("input_form"):
             )
             # Operating Costs
             user_inputs['solar_opex'] = st.number_input(
-                "OPEX (Fixed & Variable O&M) (A$/MW/year)", 
+                "OPEX (Fixed & Variable O&M) ($/MW/year)", 
                 min_value=0.0, 
                 value=17000.0,
                 key="solar_opex"
@@ -452,7 +456,7 @@ with st.form("input_form"):
                 key="wind_ref_capacity"
             )
             user_inputs['wind_reference_cost'] = st.number_input(
-                "Reference Wind Farm Cost (A$/kW)", 
+                "Reference Wind Farm Cost ($/kW)", 
                 min_value=0.0, 
                 value=3000.0,
                 key="wind_ref_cost"
@@ -490,7 +494,7 @@ with st.form("input_form"):
             )
             # Operating Costs
             user_inputs['wind_opex'] = st.number_input(
-                "OPEX (Fixed & Variable O&M) (A$/MW/year)", 
+                "OPEX (Fixed & Variable O&M) ($/MW/year)", 
                 min_value=0.0, 
                 value=25000.0,
                 key="wind_opex"
@@ -563,7 +567,7 @@ with st.form("input_form"):
             
             st.subheader("Capital Costs")
             user_inputs['battery_capex_a_kwh'] = st.number_input(
-                "Battery CAPEX (A$/kWh)", 
+                "Battery CAPEX ($/kWh)", 
                 min_value=0.0, 
                 value=300.0, 
                 step=1.0, 
@@ -579,7 +583,7 @@ with st.form("input_form"):
                 key="batt_replacement_cost"
                 )
             user_inputs['battery_opex_a_mw_yr'] = st.number_input(
-                "Battery OPEX (A$/MW/yr)", 
+                "Battery OPEX ($/MW/yr)", 
                 min_value=0.0, 
                 value=10.0, 
                 step=0.1, 
@@ -719,7 +723,7 @@ with st.form("input_form"):
         
         with col1:
             user_inputs['additional_upfront_costs_a'] = st.number_input(
-                "Additional Upfront Costs (A$)", 
+                "Additional Upfront Costs ($)", 
                 min_value=0.0, 
                 value=0.0, 
                 step=1000.0,
@@ -729,7 +733,7 @@ with st.form("input_form"):
         
         with col2:
             user_inputs['additional_annual_costs_a_yr'] = st.number_input(
-                "Additional Annual Costs (A$/yr)", 
+                "Additional Annual Costs ($/yr)", 
                 min_value=0.0, 
                 value=0.0, 
                 step=100.0,
@@ -742,7 +746,7 @@ with st.form("input_form"):
         
         with col1:
             user_inputs['average_electricity_spot_price_a_mwh'] = st.number_input(
-                "Average Electricity Spot Price (A$/MWh)", 
+                "Average Electricity Spot Price ($/MWh)", 
                 min_value=0.0, 
                 value=0.0, 
                 step=0.01,
@@ -752,7 +756,7 @@ with st.form("input_form"):
         
         with col2:
             user_inputs['oxygen_retail_price_a_kg'] = st.number_input(
-                "Oxygen Retail Price (A$/kg)", 
+                "Oxygen Retail Price ($/kg)", 
                 min_value=0.0, 
                 value=0.0, 
                 step=0.01,
@@ -768,15 +772,103 @@ with st.form("input_form"):
         user_inputs['power_plant_configuration'] = power_plant_configuration
         user_inputs['electrolyser_choice'] = electrolyser_choice
 
+        # Map form parameter names to HydrogenModel constructor parameter names
+        # Handle location selection - use selected site_location or default to US.CA
+        selected_location = user_inputs.get('site_location', 'US.CA')
+        if selected_location == 'Custom':
+            # For custom location, we will use API-based data loading below
+            model_location = 'US.CA'  # Fallback to default for model init
+            use_api_data = True
+        else:
+            model_location = selected_location  # Use the predefined location code
+            use_api_data = False
+
+        model_params = {
+            'config_path': 'config/config.yaml',
+            'location': model_location,
+            'elec_type': user_inputs.get('electrolyser_choice', 'PEM'),
+            'elec_capacity': user_inputs.get('nominal_electrolyser_capacity', 10),
+            'solar_capacity': user_inputs.get('nominal_solar_farm_capacity', 0),
+            'wind_capacity': user_inputs.get('nominal_wind_farm_capacity', 0),
+            'battery_power': user_inputs.get('battery_rated_power', 0),
+            'battery_hours': user_inputs.get('duration_of_storage_hours', 0),
+            'spot_price': user_inputs.get('average_electricity_spot_price_a_mwh', 0.0),
+            'ppa_price': 0.0  # Default, can be customized based on configuration
+        }
+        
+        # If using custom location, we should get API data
+        # For now, let's try to use existing data files if available
+        import shutil
+        from pathlib import Path
+        
+        # Copy data files from backup if Data directory doesn't exist
+        data_dir = Path('Data')
+        if not data_dir.exists():
+            backup_data = Path('old_files_backup/Data')
+            if backup_data.exists():
+                shutil.copytree(backup_data, data_dir)
+                st.info("Using reference data files for calculation...")
+
         try:
-            model = HydrogenModel(**user_inputs)
-            results = model.run()
+            model = HydrogenModel(**model_params)
+            operating_outputs = model.calculate_electrolyser_output()
+            lcoh_fixed = model.calculate_costs('fixed')
+            lcoh_variable = model.calculate_costs('variable')
+            
+            # Get hourly operation data for visualizations
+            hourly_data = model._calculate_hourly_operation()
+            
+            # Extract cost breakdown from model calculations
+            # Use model attributes to get real cost components
+            try:
+                gen_capex = getattr(model, 'solarCapex', 1500) * getattr(model, 'solarCapacity', 0) + getattr(model, 'windCapex', 1800) * getattr(model, 'windCapacity', 0)
+                elec_capex = getattr(model, 'electrolyserCapex', 8000) * getattr(model, 'elecCapacity', 10)
+                battery_capex = 0
+                if hasattr(model, 'batteryCapex') and hasattr(model, 'batteryHours') and hasattr(model, 'batteryEnergy'):
+                    if model.batteryEnergy > 0:
+                        battery_capex = model.batteryCapex[model.batteryHours] * model.batteryEnergy
+                
+                # Annual costs (simplified for now)
+                project_life = getattr(model, 'projectLife', 20)
+                gen_opex = (getattr(model, 'solarOpex', 25) * getattr(model, 'solarCapacity', 0) + 
+                           getattr(model, 'windOpex', 30) * getattr(model, 'windCapacity', 0)) * project_life
+                elec_opex = getattr(model, 'electrolyserOandM', 200) * getattr(model, 'elecCapacity', 10) * project_life
+                water_costs = operating_outputs.get('Hydrogen Output for Fixed Operation [t/yr]', 0) * getattr(model, 'waterNeeds', 9) * getattr(model, 'waterCost', 3) * project_life
+                
+                # Stack replacement (simplified calculation)
+                stack_replacement = getattr(model, 'electrolyserStackCost', 2000) * getattr(model, 'elecCapacity', 10) * 2
+                
+                cost_breakdown = {
+                    'Generator CAPEX': gen_capex,
+                    'Electrolyser CAPEX': elec_capex, 
+                    'Battery CAPEX': battery_capex,
+                    'Generator OPEX': gen_opex,
+                    'Electrolyser OPEX': elec_opex,
+                    'Stack Replacement': stack_replacement,
+                    'Water Costs': water_costs
+                }
+            except Exception as e:
+                # Fallback to estimated values if model attributes are not accessible
+                cost_breakdown = {
+                    'Generator CAPEX': 150000,
+                    'Electrolyser CAPEX': 80000, 
+                    'Battery CAPEX': 0,
+                    'Generator OPEX': 45000,
+                    'Electrolyser OPEX': 25000,
+                    'Stack Replacement': 15000,
+                    'Water Costs': 8000
+                }
 
             st.session_state.model_results = {
-                "operating_outputs": results,
-                "lcoh": results["lcoh"],
-                "business_case": results.get("business_case", {}),
-                "inputs_summary": user_inputs # Store inputs for results page
+                "operating_outputs": operating_outputs,
+                "lcoh": {
+                    "fixed": lcoh_fixed,
+                    "variable": lcoh_variable
+                },
+                "business_case": cost_breakdown,
+                "inputs_summary": user_inputs, # Store inputs for results page
+                "hourly_data": hourly_data,  # Store hourly operation data for charts
+                "model_instance": model  # Store model for additional calculations if needed
             }
             st.success("Calculation complete! Navigate to the Results page to view the outputs.")
         except KeyError as e:

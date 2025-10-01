@@ -317,7 +317,7 @@ with st.sidebar:
     st.header("Analysis Parameters")
 
     hydrogen_price = st.slider(
-        "Hydrogen Selling Price (A$/kg)",
+        "Hydrogen Selling Price ($/kg)",
         min_value=200,
         max_value=800,
         value=350,
@@ -516,7 +516,7 @@ if st.session_state.model_results:
             for price in price_range:
                 npv_sens = calculator.calculate_npv(operating_outputs, cost_params, price)
                 sensitivity_results.append({
-                    'Hydrogen Price (A$/kg)': price,
+                    'Hydrogen Price ($/kg)': price,
                     'NPV': npv_sens
                 })
 
@@ -525,7 +525,7 @@ if st.session_state.model_results:
             # Create sensitivity plot
             fig_sens = go.Figure()
             fig_sens.add_trace(go.Scatter(
-                x=sensitivity_df['Hydrogen Price (A$/kg)'],
+                x=sensitivity_df['Hydrogen Price ($/kg)'],
                 y=sensitivity_df['NPV'],
                 mode='lines+markers',
                 name='NPV vs Price',
@@ -534,7 +534,7 @@ if st.session_state.model_results:
 
             fig_sens.update_layout(
                 title="NPV Sensitivity to Hydrogen Price",
-                xaxis_title="Hydrogen Price (A$/kg)",
+                xaxis_title="Hydrogen Price ($/kg)",
                 yaxis_title="Net Present Value ($)",
                 height=400
             )

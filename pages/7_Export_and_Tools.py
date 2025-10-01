@@ -11,7 +11,13 @@ import io
 from typing import Dict, Any
 
 # Import our new utilities
-from src.utils.pdf_report_generator import create_pdf_report
+try:
+    from src.utils.pdf_report_generator import create_pdf_report
+    PDF_AVAILABLE = True
+except ImportError as e:
+    PDF_AVAILABLE = False
+    pdf_error_msg = str(e)
+
 from src.utils.data_export_manager import create_complete_data_export, DataExportManager
 from src.utils.configuration_manager import create_configuration_manager, ConfigurationManager
 from src.utils.results_comparison_tool import create_comparison_tool, ResultsComparisonTool
@@ -56,11 +62,12 @@ with tool_tabs[0]:
         report_quality = st.selectbox(
             "Report Quality",
             ["Standard", "Professional", "Enterprise"],
-            help="Affects report formatting and detail level"
+            help="Affects report formatting and detail level",
+            key="pdf_report_quality"
         )
 
-        include_charts = st.checkbox("Include Charts", value=True)
-        include_metadata = st.checkbox("Include Metadata", value=True)
+        include_charts = st.checkbox("Include Charts", value=True, key="pdf_include_charts")
+        include_metadata = st.checkbox("Include Metadata", value=True, key="pdf_include_metadata")
 
     with col2:
         st.markdown("### Report Preview")
@@ -77,27 +84,31 @@ with tool_tabs[0]:
         if st.button("🔄 Preview Report", key="preview_report"):
             st.info("PDF preview feature would display report structure here.")
 
-        if st.button("📄 Generate PDF Report", key="generate_pdf"):
-            try:
-                # Generate comprehensive PDF report
-                pdf_bytes = create_pdf_report(results_data)
+        if PDF_AVAILABLE:
+            if st.button("📄 Generate PDF Report", key="generate_pdf"):
+                try:
+                    # Generate comprehensive PDF report
+                    pdf_bytes = create_pdf_report(results_data)
 
-                # Create download button
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"hydrogen_cost_analysis_report_{timestamp}.pdf"
+                    # Create download button
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"hydrogen_cost_analysis_report_{timestamp}.pdf"
 
-                st.download_button(
-                    label="📥 Download PDF Report",
-                    data=pdf_bytes,
-                    file_name=filename,
-                    mime="application/pdf",
-                    key="download_pdf_report"
-                )
+                    st.download_button(
+                        label="📥 Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=filename,
+                        mime="application/pdf",
+                        key="download_pdf_report"
+                    )
 
-                st.success("✅ PDF report generated successfully!")
+                    st.success("✅ PDF report generated successfully!")
 
-            except Exception as e:
-                st.error(f"❌ Error generating PDF report: {str(e)}")
+                except Exception as e:
+                    st.error(f"❌ Error generating PDF report: {str(e)}")
+        else:
+            st.warning(f"📄 PDF generation not available: {pdf_error_msg}")
+            st.info("Install reportlab to enable PDF reports: `pip install reportlab>=4.0.0`")
 
 # Data Export Tab
 with tool_tabs[1]:
@@ -106,22 +117,24 @@ with tool_tabs[1]:
     export_format = st.selectbox(
         "Export Format",
         ["Excel (Complete)", "CSV Files (ZIP)", "JSON", "All Formats (ZIP)"],
-        help="Choose export format for your data"
+        help="Choose export format for your data",
+        key="data_export_format"
     )
 
     export_scope = st.selectbox(
         "Export Scope",
         ["All Data", "Filtered Data", "Charts Only", "Tables Only"],
-        help="What data to include in export"
+        help="What data to include in export",
+        key="data_export_scope"
     )
 
     export_options = st.expander("Advanced Export Options")
 
     with export_options:
-        include_metadata = st.checkbox("Include Metadata", value=True)
-        include_timestamps = st.checkbox("Include Timestamps", value=True)
-        compress_export = st.checkbox("Compress Export", value=True)
-        add_checksum = st.checkbox("Add Checksum Validation", value=False)
+        include_metadata = st.checkbox("Include Metadata", value=True, key="export_include_metadata")
+        include_timestamps = st.checkbox("Include Timestamps", value=True, key="export_include_timestamps")
+        compress_export = st.checkbox("Compress Export", value=True, key="export_compress")
+        add_checksum = st.checkbox("Add Checksum Validation", value=False, key="export_add_checksum")
 
     # Export preview
     st.markdown("### Export Preview")
@@ -189,7 +202,8 @@ with tool_tabs[2]:
 
     config_action = st.selectbox(
         "Configuration Action",
-        ["Save Current", "Load Existing", "Use Preset", "Export Config"]
+        ["Save Current", "Load Existing", "Use Preset", "Export Config"],
+        key="config_action_select"
     )
 
     if config_action == "Save Current":
@@ -532,22 +546,4 @@ with tool_tabs[3]:
                 st.success("✅ Sensitivity analysis would run here!")
 
 # Footer
-st.markdown("---")
-st.markdown("### 🎯 Phase 5.5 Summary")
-st.markdown("**✅ Implemented Features:**")
-st.markdown("• 📄 Professional PDF report generation")
-st.markdown("• 💾 Comprehensive data export (Excel, CSV, JSON)")
-st.markdown("• ⚙️ Configuration management (save/load/presets)")
-st.markdown("• 📊 Results comparison tool (scenario analysis)")
-
-left_col, right_col = st.columns(2)
-with left_col:
-    st.success("🎉 **All Phase 5.5 tasks successfully completed!**")
-
-    if st.button("🎬 Start Phase 6 Testing", key="phase6_button"):
-        st.success("✨ This would transition to Phase 6: Testing, Documentation & Quality Assurance!")
-
-with right_col:
-    st.info("**Next Steps:**\n• Phase 6 includes comprehensive testing\n• Documentation and code quality\n• User experience validation\n• Performance benchmarks")
-
 add_s2d2_footer()

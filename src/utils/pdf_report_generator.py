@@ -5,18 +5,25 @@ Creates professional PDF reports with charts, data, and analysis results.
 
 import pandas as pd
 import numpy as np
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.platypus.flowables import PageBreak
 from datetime import datetime
 import io
 from typing import Dict, Any, Optional, List
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Optional reportlab imports with graceful fallback
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.platypus.flowables import PageBreak
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+    logger.warning("reportlab not available. PDF generation will be disabled.")
 
 class PDFReportGenerator:
     """
@@ -420,6 +427,12 @@ def create_pdf_report(results_data: Dict, charts_data: Optional[Dict] = None) ->
 
     Returns:
         PDF content as bytes
+    
+    Raises:
+        ImportError: If reportlab is not available
     """
+    if not REPORTLAB_AVAILABLE:
+        raise ImportError("reportlab is not installed. Install with: pip install reportlab>=4.0.0")
+    
     generator = PDFReportGenerator()
     return generator.generate_comprehensive_report(results_data, charts_data)

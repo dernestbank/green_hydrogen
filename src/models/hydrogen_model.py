@@ -1,5 +1,6 @@
 """Hydrogen Model
-Defines a class HydrogenModel which mimics the HySupply Cost Tool v1.3 Excel model.
+Defines a class HydrogenModel which is the technoecomic analysis model/engine for green hydrogen.
+ref: the HySupply Cost Tool v1.3 Excel model.
 """
 
 import os
@@ -25,10 +26,10 @@ class HydrogenModel:
         a dataframe containing hourly wind traces for 1 year
     location : str
         the ID for the location to be modelled. Needs to correspond to a column in solar_df and wind_df
-        (default "REZ-N1")
+        (default "US.CA")
     elecType : str
         the electrolyser type - either "AE" for Alkaline Electrolyte or "PEM" for Polymer Electrolyte Membrane
-        (default "AE")
+        (default "PEM")
     elecCapacity : int
         the rated capacity of the electrolyser in MW (default 10)
     solarCapacity : float
@@ -40,9 +41,9 @@ class HydrogenModel:
     batteryHours : int
         the time period that the battery can discharge at full power, must be 0, 1, 2, 4 or 8 (default 0)
     spotPrice : float
-        Price that excess generation can be sold to the grid for, in A$/MWh (default 0.0)
+        Price that excess generation can be sold to the grid for, in $/MWh (default 0.0)
     ppaPrice : float
-        Price that electricity can be purchased for, in A$/MWh. Setting this value greater than zero results in all
+        Price that electricity can be purchased for, in $/MWh. Setting this value greater than zero results in all
         electricity being bought from the grid and hence CAPEX and OPEX for the generation are ignored (default 0.0)
 
     Methods
@@ -58,7 +59,7 @@ class HydrogenModel:
     """
 
     def __init__(self, config_manager=None, solardata=None, winddata=None, config_path='config/config.yaml',
-                 location='REZ-N1', elec_type='AE', elec_capacity=10, solar_capacity=10.0, wind_capacity=0.0,
+                 location='US.CA', elec_type='PEM', elec_capacity=10, solar_capacity=10.0, wind_capacity=0.0,
                  battery_power=0, battery_hours=0, spot_price=0.0, ppa_price=0.0):
         """
         Initialize the hydrogen model with the specified parameters.
@@ -75,8 +76,8 @@ class HydrogenModel:
             wind_capacity: Wind farm capacity in MW
             battery_power: Battery power capacity in MW
             battery_hours: Battery discharge duration (0, 1, 2, 4, or 8)
-            spot_price: Price for selling excess generation in A$/MWh
-            ppa_price: Price for purchasing electricity in A$/MWh
+            spot_price: Price for selling excess generation in $/MWh
+            ppa_price: Price for purchasing electricity in $/MWh
         """
         if solardata is not None:
             self.solar_df = solardata
@@ -178,7 +179,7 @@ class HydrogenModel:
         self.battLife = self.config_dict.get('battery_lifetime', 10)
 
         # Cost parameters - solar
-        self.solarCapex = self.config_dict.get('solar_capex', 1120) * self.MWtokW  # A$/MW
+        self.solarCapex = self.config_dict.get('solar_capex', 1120) * self.MWtokW  # $/MW
         self.solarCapex = self._scale_capex(
             self.solarCapex,
             self.solarCapacity,
@@ -191,10 +192,10 @@ class HydrogenModel:
             self.config_dict.get('powerplant_install', 0.0),
             self.config_dict.get('powerplant_land', 0.0)
         )
-        self.solarOpex = self.config_dict.get('solar_opex', 16990)  # A$/MW
+        self.solarOpex = self.config_dict.get('solar_opex', 16990)  # $/MW
 
         # Cost parameters - wind
-        self.windCapex = self.config_dict.get('wind_capex', 1942) * self.MWtokW  # A$/MW
+        self.windCapex = self.config_dict.get('wind_capex', 1942) * self.MWtokW  # $/MW
         self.windCapex = self._scale_capex(
             self.windCapex,
             self.windCapacity,
@@ -207,25 +208,25 @@ class HydrogenModel:
             self.config_dict.get('powerplant_install', 0.0),
             self.config_dict.get('powerplant_land', 0.0)
         )
-        self.windOpex = self.config_dict.get('wind_opex', 25000)  # A$/MW
+        self.windOpex = self.config_dict.get('wind_opex', 25000)  # $/MW
 
         # Battery costs
-        self.batteryCapex = self.config_dict.get('battery_capex', {0: 0, 1: 827, 2: 542, 4: 446, 8: 421})  # A$/kWh
-        # Convert to A$/MWh
+        self.batteryCapex = self.config_dict.get('battery_capex', {0: 0, 1: 827, 2: 542, 4: 446, 8: 421})  # $/kWh
+        # Convert to $/MWh
         self.batteryCapex.update({n: self.batteryCapex[n] * self.MWtokW for n in self.batteryCapex.keys()})
-        self.batteryOpex = self.config_dict.get('battery_opex', {0: 0, 1: 4833, 2: 9717, 4: 19239, 8: 39314})  # A$/MW
+        self.batteryOpex = self.config_dict.get('battery_opex', {0: 0, 1: 4833, 2: 9717, 4: 19239, 8: 39314})  # $/MW
         self.battReplacement = self.config_dict.get('battery_replacement', 100) / 100 * self.batteryCapex[self.batteryHours]
 
         # Electrolyser costs
-        electrolyserCapexUnscaled = self.config_dict[elec_type_key]['electrolyser_capex'] * self.MWtokW  # A$/MW
+        electrolyserCapexUnscaled = self.config_dict[elec_type_key]['electrolyser_capex'] * self.MWtokW  # $/MW
         self.electrolyserCapex = self._scale_capex(
             electrolyserCapexUnscaled,
             self.elecCapacity,
             self.elecReferenceCap,
             self.elecCostReduction
         )
-        self.electrolyserOandM = self.config_dict[elec_type_key]['electrolyser_om'] / 100 * self.electrolyserCapex  # A$/MW
-        self.electrolyserStackCost = self.config_dict.get('electrolyser_stack_cost', 40) / 100 * self.electrolyserCapex  # A$/MW
+        self.electrolyserOandM = self.config_dict[elec_type_key]['electrolyser_om'] / 100 * self.electrolyserCapex  # $/MW
+        self.electrolyserStackCost = self.config_dict.get('electrolyser_stack_cost', 40) / 100 * self.electrolyserCapex  # $/MW
         self.electrolyserCapex = self._get_capex(
             self.electrolyserCapex,
             self.config_dict.get('elec_equip', 1.0),
@@ -234,7 +235,7 @@ class HydrogenModel:
         )
 
         # Other costs
-        self.waterCost = self.config_dict.get('water_cost', 5)  # A$/kL
+        self.waterCost = self.config_dict.get('water_cost', 5)  # $/kL
         self.discountRate = self.config_dict.get('discount_rate', 4) / 100  # percentage as decimal
         self.projectLife = self.config_dict.get('project_life', 20)
 
@@ -277,7 +278,7 @@ class HydrogenModel:
         Returns
         -------
         lcoh : float
-            The levelised cost of hydrogen in A$/kg rounded to two decimal places
+            The levelised cost of hydrogen in $/kg rounded to two decimal places
         """
         if not self.operating_outputs:
             self.calculate_electrolyser_output()
@@ -756,8 +757,8 @@ class HydrogenModel:
                 'Variable Operation (kg/day)': f"{self.operating_outputs['Hydrogen Output for Variable Operation [t/yr]'] * 1000 / 365:,.1f}",
             },
             'financial_results': {
-                'LCOH - Fixed Consumption (A$/kg)': f"{fixed_lcoh:.2f}",
-                'LCOH - Variable Consumption (A$/kg)': f"{variable_lcoh:.2f}",
+                'LCOH - Fixed Consumption ($/kg)': f"{fixed_lcoh:.2f}",
+                'LCOH - Variable Consumption ($/kg)': f"{variable_lcoh:.2f}",
                 'Project Life (years)': self.projectLife,
                 'Discount Rate': f"{self.discountRate:.1%}",
             },

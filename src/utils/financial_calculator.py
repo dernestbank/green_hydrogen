@@ -144,7 +144,7 @@ class FinancialCalculator:
             ROI as a percentage
         """
         npv = self.calculate_npv(operating_outputs, cost_params, hydrogen_price)
-        initial_investment = abs(self.cash_flows['total'][0])  # Year 0 CAPEX (negative)
+        initial_investment = abs(self.cash_flows['Total'][0])  # Year 0 CAPEX (negative)
 
         if initial_investment == 0:
             return 0

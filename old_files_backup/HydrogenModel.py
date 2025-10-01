@@ -37,9 +37,9 @@ class HydrogenModel:
     batteryHours : int
         the time period that the battery can discharge at full power, must be 0, 1, 2, 4 or 8 (default 0)
     spotPrice : float
-        Price that excess generation can be sold to the grid for, in A$/MWh (default 0.0)
+        Price that excess generation can be sold to the grid for, in $/MWh (default 0.0)
     ppaPrice : float
-        Price that electricity can be purchased for, in A$/MWh. Setting this value greater than zero results in all
+        Price that electricity can be purchased for, in $/MWh. Setting this value greater than zero results in all
         electricity being bought from the grid and hence CAPEX and OPEX for the generation are ignored (default 0.0)
 
     Methods
@@ -123,33 +123,33 @@ class HydrogenModel:
             self.battLife = config_dict['battLifetime']
 
             # Costings inputs
-            self.solarCapex = config_dict['solarCapex'] * self.MWtokW  # A$/MW
+            self.solarCapex = config_dict['solarCapex'] * self.MWtokW  # $/MW
             self.solarCapex = self.__scale_capex(self.solarCapex, self.solarCapacity,
                                                  config_dict['powerplantReferenceCapacity'],
                                                  config_dict['powerplantCostReduction'])
             self.solarCapex = self.__get_capex(self.solarCapex, config_dict['powerplantEquip'],
                                                config_dict['powerplantInstall'], config_dict['powerplantLand'])
-            self.solarOpex = config_dict['solarOpex']  # A$/MW
-            self.windCapex = config_dict['windCapex'] * self.MWtokW  # A$/MW
+            self.solarOpex = config_dict['solarOpex']  # $/MW
+            self.windCapex = config_dict['windCapex'] * self.MWtokW  # $/MW
             self.windCapex = self.__scale_capex(self.windCapex, self.windCapacity,
                                                 config_dict['powerplantReferenceCapacity'],
                                                 config_dict['powerplantCostReduction'])
             self.windCapex = self.__get_capex(self.windCapex, config_dict['powerplantEquip'],
                                               config_dict['powerplantInstall'], config_dict['powerplantLand'])
-            self.windOpex = config_dict['windOpex']  # A$/MW
-            self.batteryCapex = config_dict['batteryCapex']  # A$/kWh
-            self.batteryCapex.update({n: self.batteryCapex[n] * self.MWtokW for n in self.batteryCapex.keys()})  # A$/MWh
-            self.batteryOpex = config_dict['batteryOpex']  # A$/MW
-            self.battReplacement = config_dict['batteryReplacement'] / 100 * self.batteryCapex[self.batteryHours] # A$/MWh
-            electrolyserCapexUnscaled = config_dict[self.elecType]['electrolyserCapex'] * self.MWtokW  # A$/MW
+            self.windOpex = config_dict['windOpex']  # $/MW
+            self.batteryCapex = config_dict['batteryCapex']  # $/kWh
+            self.batteryCapex.update({n: self.batteryCapex[n] * self.MWtokW for n in self.batteryCapex.keys()})  # $/MWh
+            self.batteryOpex = config_dict['batteryOpex']  # $/MW
+            self.battReplacement = config_dict['batteryReplacement'] / 100 * self.batteryCapex[self.batteryHours] # $/MWh
+            electrolyserCapexUnscaled = config_dict[self.elecType]['electrolyserCapex'] * self.MWtokW  # $/MW
             self.electrolyserCapex = self.__scale_capex(electrolyserCapexUnscaled, self.elecCapacity,
                                                         self.elecReferenceCap, self.elecCostReduction)
-            self.electrolyserOandM = config_dict[self.elecType]['electrolyserOandM'] / 100 * self.electrolyserCapex  # A$/MW
+            self.electrolyserOandM = config_dict[self.elecType]['electrolyserOandM'] / 100 * self.electrolyserCapex  # $/MW
             # get CAPEX including indirect costs
-            self.electrolyserStackCost = config_dict['electrolyserStackCost'] / 100 * self.electrolyserCapex  # A$/MW
+            self.electrolyserStackCost = config_dict['electrolyserStackCost'] / 100 * self.electrolyserCapex  # $/MW
             self.electrolyserCapex = self.__get_capex(self.electrolyserCapex, config_dict['elecEquip'],
                                                       config_dict['elecInstall'], config_dict['elecLand'])
-            self.waterCost = config_dict['waterCost']  # A$/kL
+            self.waterCost = config_dict['waterCost']  # $/kL
             self.discountRate = config_dict['discountRate'] / 100  # percentage as decimal
             self.projectLife = config_dict['projectLife']
         except KeyError as e:
@@ -193,7 +193,7 @@ class HydrogenModel:
         Returns
         -------
         lcoh
-            the LCOH in A$/kg rounded to two decimal places
+            the LCOH in $/kg rounded to two decimal places
         """
 
         if not self.operating_outputs:

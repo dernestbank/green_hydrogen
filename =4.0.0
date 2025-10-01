@@ -1,0 +1,10 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting reportlab
+  Obtaining dependency information for reportlab from https://files.pythonhosted.org/packages/52/c8/aaf4e08679e7b1dc896ad30de0d0527f0fd55582c2e6deee4f2cc899bf9f/reportlab-4.4.3-py3-none-any.whl.metadata
+  Downloading reportlab-4.4.3-py3-none-any.whl.metadata (1.7 kB)
+Requirement already satisfied: pillow>=9.0.0 in c:\users\derne\appdata\roaming\python\python311\site-packages (from reportlab) (10.3.0)
+Requirement already satisfied: charset-normalizer in c:\users\derne\appdata\roaming\python\python311\site-packages (from reportlab) (3.3.2)
+Downloading reportlab-4.4.3-py3-none-any.whl (2.0 MB)
+   ---------------------------------------- 2.0/2.0 MB 5.0 MB/s eta 0:00:00
+Installing collected packages: reportlab
+Successfully installed reportlab-4.4.3

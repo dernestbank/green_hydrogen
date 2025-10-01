@@ -1,0 +1,20 @@
+metadata:
+  name: Cost Optimized
+  description: 'Default preset: Cost Optimized'
+  created_date: '2025-09-08T11:19:48.012889'
+  modified_date: '2025-09-08T11:19:48.012889'
+  version: '2.0'
+  author: System
+configuration:
+  location: REZ-O1
+  electrolyser_type: AE
+  nominal_electrolyser_capacity: 15.0
+  nominal_solar_farm_capacity: 20.0
+  nominal_wind_farm_capacity: 5.0
+  battery_power_rating: 1.0
+  battery_storage_duration: 2.0
+  hourly_electricity_price: 25.0
+  hydrogen_selling_price: 280.0
+  discount_rate: 0.03
+  project_life: 20
+timestamp: '2025-09-08T11:19:48.012889'

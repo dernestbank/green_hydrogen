@@ -259,12 +259,12 @@ class ConfigurationManager:
             "solar_include_raw_data": False,
 
             "solar_reference_capacity": 1000.0,     # kW
-            "solar_reference_equipment_cost": 1500.0,  # A$/kW
+            "solar_reference_equipment_cost": 1500.0,  # $/kW
             "solar_scale_index": 0.9,
             "solar_cost_reduction": 0.0,    # %
             "solar_installation_costs": 0.0,  # %
             "solar_land_cost": 8.0,         # %
-            "solar_opex": 17000.0,          # A$/MW/year
+            "solar_opex": 17000.0,          # $/MW/year
             "solar_degradation": 0.5,       # %
             "solar_pv_degradation_rate_percent_year": 0.5,  # %
         }
@@ -281,12 +281,12 @@ class ConfigurationManager:
             "wind_include_raw_data": False,
 
             "wind_reference_capacity": 1000.0,   # kW
-            "wind_reference_cost": 3000.0,       # A$/kW
+            "wind_reference_cost": 3000.0,       # $/kW
             "wind_scale_index": 0.9,
             "wind_cost_reduction": 0.0,     # %
             "wind_installation_costs": 0.0, # %
             "wind_land_cost": 8.0,          # %
-            "wind_opex": 25000.0,           # A$/MW/year
+            "wind_opex": 25000.0,           # $/MW/year
             "wind_degradation": 1.5,        # %
             "wind_farm_degradation_rate_percent_year": 1.5,  # %
         }
@@ -299,10 +299,10 @@ class ConfigurationManager:
             "round_trip_efficiency": 90.0,        # %
             "minimum_state_of_charge": 10.0,      # %
             "maximum_state_of_charge": 90.0,      # %
-            "battery_capex_a_kwh": 300.0,         # A$/kWh
+            "battery_capex_a_kwh": 300.0,         # $/kWh
             "battery_indirect_costs_percent_of_capex": 10.0,    # %
             "battery_replacement_cost_of_capex": 50.0,          # %
-            "battery_opex_a_mw_yr": 10.0,         # A$/MW/yr
+            "battery_opex_a_mw_yr": 10.0,         # $/MW/yr
         }
 
     def _get_grid_defaults(self) -> Dict[str, Any]:
@@ -312,7 +312,7 @@ class ConfigurationManager:
             "grid_service_charge_percent": 2.0,         # %
             "principal_ppa_cost_percent": 0.0,          # %
             "transmission_connection_cost_percent": 5.0, # %
-            "average_electricity_spot_price_a_mwh": 0.0, # A$/MWh
+            "average_electricity_spot_price_a_mwh": 0.0, # $/MWh
         }
 
     def apply_configuration_presets(self, inputs: Dict[str, Any],
