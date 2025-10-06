@@ -11,6 +11,10 @@ import math
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 import logging
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from location_manager import LocationManager
 
 logger = logging.getLogger(__name__)
 
@@ -60,16 +64,16 @@ class HydrogenModel:
 
     def __init__(self, config_manager=None, solardata=None, winddata=None, config_path='config/config.yaml',
                  location='US.CA', elec_type='PEM', elec_capacity=10, solar_capacity=10.0, wind_capacity=0.0,
-                 battery_power=0, battery_hours=0, spot_price=0.0, ppa_price=0.0):
+                 battery_power=0, battery_hours=0, spot_price=0.0, ppa_price=0.0, api_key=None):
         """
         Initialize the hydrogen model with the specified parameters.
-        
+
         Args:
             config_manager: Optional ConfigManager instance to use
             solardata: Optional DataFrame with solar data
             winddata: Optional DataFrame with wind data
             config_path: Path to configuration file
-            location: Location ID corresponding to columns in solar/wind data
+            location: Location ID (predefined US state or "lat,lon" for custom location)
             elec_type: Electrolyser type ('AE' or 'PEM')
             elec_capacity: Electrolyser capacity in MW
             solar_capacity: Solar farm capacity in MW
@@ -78,24 +82,40 @@ class HydrogenModel:
             battery_hours: Battery discharge duration (0, 1, 2, 4, or 8)
             spot_price: Price for selling excess generation in $/MWh
             ppa_price: Price for purchasing electricity in $/MWh
+            api_key: Optional API key for renewables.ninja (enables custom location support)
         """
+        # Initialize location manager for data loading
+        self.location_manager = LocationManager(api_key)
+
         if solardata is not None:
             self.solar_df = solardata
         elif solar_capacity > 0:
-            solarfile = str(Path('Data/solar-traces.csv'))
-            if not os.path.exists(solarfile):
-                raise FileNotFoundError(f"Solar data file not found at {solarfile}")
-            self.solar_df = pd.read_csv(solarfile, header=[0], skiprows=[1], index_col=0)
+            # Try to get solar data from location manager
+            solar_data = self.location_manager.get_solar_data(location, solar_capacity)
+            if solar_data is not None:
+                self.solar_df = pd.DataFrame({location: solar_data})
+            else:
+                # Fallback to CSV loading
+                solarfile = str(Path('Data/solar-traces.csv'))
+                if not os.path.exists(solarfile):
+                    raise FileNotFoundError(f"Solar data file not found at {solarfile}")
+                self.solar_df = pd.read_csv(solarfile, header=[0], skiprows=[1], index_col=0)
         else:
             self.solar_df = pd.DataFrame()
-            
+
         if winddata is not None:
             self.wind_df = winddata
         elif wind_capacity > 0:
-            windfile = str(Path('Data/wind-traces.csv'))
-            if not os.path.exists(windfile):
-                raise FileNotFoundError(f"Wind data file not found at {windfile}")
-            self.wind_df = pd.read_csv(windfile, header=[0], skiprows=[1], index_col=0)
+            # Try to get wind data from location manager
+            wind_data = self.location_manager.get_wind_data(location, wind_capacity)
+            if wind_data is not None:
+                self.wind_df = pd.DataFrame({location: wind_data})
+            else:
+                # Fallback to CSV loading
+                windfile = str(Path('Data/wind-traces.csv'))
+                if not os.path.exists(windfile):
+                    raise FileNotFoundError(f"Wind data file not found at {windfile}")
+                self.wind_df = pd.read_csv(windfile, header=[0], skiprows=[1], index_col=0)
         else:
             self.wind_df = pd.DataFrame()
             
@@ -524,8 +544,8 @@ class HydrogenModel:
         # Check overloading constraints for each hour
         for hour in range(1, len(cf_profile_df)):
             for hour_i in range(1, min(hour, self.elecOverloadRecharge)+1):
-                if can_overload[hour] and can_overload[hour-hour_i]:
-                    can_overload[hour] = False
+                if can_overload.iloc[hour] and can_overload.iloc[hour-hour_i]:
+                    can_overload.iloc[hour] = False
                     
         cf_profile_df['Max_Overload'] = self.elecOverload
         cf_profile_df['Energy_generated'] = cf_profile_df['Generator_CF'] * oversize
